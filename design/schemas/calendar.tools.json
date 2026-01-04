@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "0.1",
+  "domain": "calendar",
+  "definitions": {
+    "Pagination": {
+      "type": "object",
+      "properties": {
+        "page_size": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 },
+        "cursor": { "type": "string", "description": "Opaque continuation token" }
+      }
+    },
+    "DateTimeISO": {
+      "type": "string",
+      "description": "RFC3339/ISO-8601 datetime with timezone, e.g. 2026-01-04T10:30:00-05:00"
+    },
+    "Body": {
+      "type": "object",
+      "properties": {
+        "content_type": { "type": "string", "enum": ["text", "html"], "default": "html" },
+        "content": { "type": "string" }
+      },
+      "required": ["content"]
+    },
+    "Recipient": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Calendar": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "owner": { "$ref": "#/definitions/Recipient" }
+      },
+      "required": ["id", "name"]
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "$ref": "#/definitions/Body" },
+        "start_datetime": { "$ref": "#/definitions/DateTimeISO" },
+        "end_datetime": { "$ref": "#/definitions/DateTimeISO" },
+        "timezone": { "type": "string" },
+        "location": { "type": "string" },
+        "attendees": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+        "is_cancelled": { "type": "boolean" }
+      },
+      "required": ["id", "subject", "start_datetime", "end_datetime"]
+    }
+  },
+  "tools": [
+    {
+      "name": "calendar_list_calendars",
+      "description": "List calendars.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/Calendar" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "calendar_list_events",
+      "description": "List events in a time range.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "calendar_id": { "type": "string" },
+          "start_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "end_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "include_cancelled": { "type": "boolean", "default": false },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        },
+        "required": ["start_datetime", "end_datetime"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/Event" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "calendar_get_event",
+      "description": "Get event details by ID.",
+      "input_schema": {
+        "type": "object",
+        "properties": { "event_id": { "type": "string" } },
+        "required": ["event_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "event": { "$ref": "#/definitions/Event" } }
+      }
+    },
+    {
+      "name": "calendar_create_event",
+      "description": "Create a calendar event.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "calendar_id": { "type": "string" },
+          "subject": { "type": "string" },
+          "body": { "$ref": "#/definitions/Body" },
+          "start_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "end_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "timezone": { "type": "string", "default": "America/New_York" },
+          "location": { "type": "string" },
+          "attendees": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+          "is_online_meeting": { "type": "boolean", "default": false },
+          "online_meeting_provider": { "type": "string", "enum": ["teamsForBusiness"], "default": "teamsForBusiness" },
+          "transaction_id": { "type": "string", "description": "Idempotency token for event creation" }
+        },
+        "required": ["subject", "start_datetime", "end_datetime"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "event_id": { "type": "string" },
+          "event": { "$ref": "#/definitions/Event" }
+        }
+      }
+    },
+    {
+      "name": "calendar_update_event",
+      "description": "Update an event by patch.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "event_id": { "type": "string" },
+          "patch": { "type": "object" },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["event_id", "patch"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } }
+      }
+    },
+    {
+      "name": "calendar_delete_event",
+      "description": "Delete an event.",
+      "input_schema": {
+        "type": "object",
+        "properties": { "event_id": { "type": "string" } },
+        "required": ["event_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } }
+      }
+    },
+    {
+      "name": "calendar_respond_to_invite",
+      "description": "Respond to an invite.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "event_id": { "type": "string" },
+          "response": { "type": "string", "enum": ["accept", "tentative", "decline"] },
+          "comment": { "type": "string" },
+          "send_response": { "type": "boolean", "default": true },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["event_id", "response"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } }
+      }
+    },
+    {
+      "name": "calendar_find_availability",
+      "description": "Find availability for attendees.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "attendees": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+          "start_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "end_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "interval_minutes": { "type": "integer", "minimum": 5, "maximum": 60, "default": 30 }
+        },
+        "required": ["attendees", "start_datetime", "end_datetime"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start_datetime": { "$ref": "#/definitions/DateTimeISO" },
+                "end_datetime": { "$ref": "#/definitions/DateTimeISO" },
+                "is_available": { "type": "boolean" }
+              },
+              "required": ["start_datetime", "end_datetime", "is_available"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

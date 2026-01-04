@@ -1,0 +1,9 @@
+environment          = "test"
+cluster_arn          = "arn:aws:ecs:us-east-1:123456789012:cluster/existing"
+task_execution_role_arn = "arn:aws:iam::123456789012:role/ecsTaskExecutionRole"
+task_role_arn        = "arn:aws:iam::123456789012:role/msgraph-mcp-task"
+subnet_ids           = ["subnet-abc", "subnet-def"]
+security_group_ids   = ["sg-abc"]
+target_group_arn     = "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/existing/abc"
+container_image      = "registry.example.com/msgraph-mcp:test"
+redis_endpoint       = "redis.internal:6379"

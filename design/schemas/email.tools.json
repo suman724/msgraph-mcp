@@ -1,0 +1,307 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "0.1",
+  "domain": "email",
+  "definitions": {
+    "Pagination": {
+      "type": "object",
+      "properties": {
+        "page_size": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 },
+        "cursor": { "type": "string", "description": "Opaque continuation token" }
+      }
+    },
+    "DateTimeISO": {
+      "type": "string",
+      "description": "RFC3339/ISO-8601 datetime with timezone, e.g. 2026-01-04T10:30:00-05:00"
+    },
+    "Body": {
+      "type": "object",
+      "properties": {
+        "content_type": { "type": "string", "enum": ["text", "html"], "default": "html" },
+        "content": { "type": "string" }
+      },
+      "required": ["content"]
+    },
+    "Recipient": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Folder": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "display_name": { "type": "string" },
+        "parent_folder_id": { "type": "string" },
+        "total_item_count": { "type": "integer" },
+        "unread_item_count": { "type": "integer" }
+      },
+      "required": ["id", "display_name"]
+    },
+    "MessageSummary": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "from": { "$ref": "#/definitions/Recipient" },
+        "received_datetime": { "$ref": "#/definitions/DateTimeISO" },
+        "is_read": { "type": "boolean" },
+        "has_attachments": { "type": "boolean" }
+      },
+      "required": ["id"]
+    },
+    "Attachment": {
+      "type": "object",
+      "properties": {
+        "attachment_id": { "type": "string" },
+        "name": { "type": "string" },
+        "content_type": { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "content_base64": { "type": "string" }
+      },
+      "required": ["attachment_id", "name"]
+    },
+    "Message": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "from": { "$ref": "#/definitions/Recipient" },
+        "to": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+        "cc": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+        "bcc": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+        "received_datetime": { "$ref": "#/definitions/DateTimeISO" },
+        "body": { "$ref": "#/definitions/Body" },
+        "attachments": { "type": "array", "items": { "$ref": "#/definitions/Attachment" } }
+      },
+      "required": ["id"]
+    }
+  },
+  "tools": [
+    {
+      "name": "mail_list_folders",
+      "description": "List mail folders.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "include_hidden": { "type": "boolean", "default": false },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/Folder" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_list_messages",
+      "description": "List messages for a folder or inbox with optional filters.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "folder_id": { "type": "string" },
+          "from_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "to_datetime": { "$ref": "#/definitions/DateTimeISO" },
+          "unread_only": { "type": "boolean", "default": false },
+          "select_fields": { "type": "array", "items": { "type": "string" } },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/MessageSummary" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_get_message",
+      "description": "Get a message by ID.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message_id": { "type": "string" },
+          "include_body": { "type": "boolean", "default": true },
+          "include_attachments": { "type": "boolean", "default": false }
+        },
+        "required": ["message_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "message": { "$ref": "#/definitions/Message" }
+        }
+      }
+    },
+    {
+      "name": "mail_search_messages",
+      "description": "Search messages using a query string.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "folder_id": { "type": "string" },
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "query": { "type": "string" },
+                "from": { "type": "integer", "minimum": 0, "default": 0 },
+                "size": { "type": "integer", "minimum": 1, "maximum": 50, "default": 25 }
+              },
+              "required": ["query"]
+            }
+          },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/MessageSummary" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_create_draft",
+      "description": "Create a draft email.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "subject": { "type": "string" },
+          "to": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+          "cc": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+          "bcc": { "type": "array", "items": { "$ref": "#/definitions/Recipient" } },
+          "body": { "$ref": "#/definitions/Body" },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": { "type": "string" },
+                "content_base64": { "type": "string" },
+                "content_type": { "type": "string" }
+              },
+              "required": ["filename", "content_base64"]
+            }
+          },
+          "idempotency_key": { "type": "string", "description": "UUID for safe retries" }
+        },
+        "required": ["subject", "to", "body"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "draft_id": { "type": "string" },
+          "message": { "$ref": "#/definitions/Message" }
+        }
+      }
+    },
+    {
+      "name": "mail_send_draft",
+      "description": "Send a draft message.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "draft_id": { "type": "string" },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["draft_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "sent_message_id": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_reply",
+      "description": "Reply to a message.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message_id": { "type": "string" },
+          "reply_all": { "type": "boolean", "default": false },
+          "comment": { "$ref": "#/definitions/Body" },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["message_id", "comment"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "sent_message_id": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_mark_read",
+      "description": "Mark a message read or unread.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message_id": { "type": "string" },
+          "is_read": { "type": "boolean" }
+        },
+        "required": ["message_id", "is_read"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_move_message",
+      "description": "Move a message to another folder.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message_id": { "type": "string" },
+          "destination_folder_id": { "type": "string" }
+        },
+        "required": ["message_id", "destination_folder_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "message_id": { "type": "string" },
+          "destination_folder_id": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "mail_get_attachment",
+      "description": "Get attachment metadata or content.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message_id": { "type": "string" },
+          "attachment_id": { "type": "string" },
+          "include_content_base64": { "type": "boolean", "default": false }
+        },
+        "required": ["message_id", "attachment_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "attachment": { "$ref": "#/definitions/Attachment" }
+        }
+      }
+    }
+  ]
+}

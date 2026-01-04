@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "0.1",
+  "domain": "onedrive",
+  "definitions": {
+    "Pagination": {
+      "type": "object",
+      "properties": {
+        "page_size": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 },
+        "cursor": { "type": "string", "description": "Opaque continuation token" }
+      }
+    },
+    "Drive": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "drive_type": { "type": "string" },
+        "owner": { "type": "string" },
+        "web_url": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "DriveItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "size_bytes": { "type": "integer" },
+        "is_folder": { "type": "boolean" },
+        "mime_type": { "type": "string" },
+        "web_url": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "UploadSession": {
+      "type": "object",
+      "properties": {
+        "upload_url": { "type": "string" },
+        "expiration_datetime": { "type": "string" },
+        "next_expected_ranges": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["upload_url"]
+    }
+  },
+  "tools": [
+    {
+      "name": "drive_get_default",
+      "description": "Get the default drive.",
+      "input_schema": { "type": "object", "properties": {} },
+      "output_schema": {
+        "type": "object",
+        "properties": { "drive": { "$ref": "#/definitions/Drive" } }
+      }
+    },
+    {
+      "name": "drive_list_children",
+      "description": "List items under a folder.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "item_id": { "type": "string" },
+          "path": { "type": "string" },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/DriveItem" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "drive_get_item",
+      "description": "Get item metadata.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "item_id": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "item": { "$ref": "#/definitions/DriveItem" } }
+      }
+    },
+    {
+      "name": "drive_search",
+      "description": "Search for items in a drive.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "query": { "type": "string" },
+          "path": { "type": "string" },
+          "pagination": { "$ref": "#/definitions/Pagination" }
+        },
+        "required": ["query"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/definitions/DriveItem" } },
+          "next_cursor": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "drive_download_file",
+      "description": "Download a file or provide a download URL.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "item_id": { "type": "string" },
+          "path": { "type": "string" },
+          "return_mode": { "type": "string", "enum": ["base64", "download_url"], "default": "download_url" },
+          "max_bytes": { "type": "integer", "minimum": 1, "maximum": 104857600, "default": 104857600 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "download_url": { "type": "string" },
+          "content_base64": { "type": "string" },
+          "size_bytes": { "type": "integer" }
+        }
+      }
+    },
+    {
+      "name": "drive_upload_small_file",
+      "description": "Upload a small file (simple upload).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "parent_path": { "type": "string", "default": "/" },
+          "filename": { "type": "string" },
+          "content_base64": { "type": "string" },
+          "conflict_behavior": { "type": "string", "enum": ["fail", "replace", "rename"], "default": "rename" },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["filename", "content_base64"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "item": { "$ref": "#/definitions/DriveItem" } }
+      }
+    },
+    {
+      "name": "drive_create_upload_session",
+      "description": "Create a large file upload session.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "parent_path": { "type": "string", "default": "/" },
+          "filename": { "type": "string" },
+          "conflict_behavior": { "type": "string", "enum": ["fail", "replace", "rename"], "default": "rename" },
+          "idempotency_key": { "type": "string" }
+        },
+        "required": ["filename"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "upload_session": { "$ref": "#/definitions/UploadSession" }
+        }
+      }
+    },
+    {
+      "name": "drive_upload_chunk",
+      "description": "Upload a chunk to an existing upload session.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "upload_url": { "type": "string" },
+          "content_base64": { "type": "string" },
+          "chunk_start": { "type": "integer", "minimum": 0 },
+          "chunk_end": { "type": "integer", "minimum": 1 },
+          "total_size": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["upload_url", "content_base64", "chunk_start", "chunk_end", "total_size"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "next_expected_ranges": { "type": "array", "items": { "type": "string" } },
+          "item": { "$ref": "#/definitions/DriveItem" }
+        }
+      }
+    },
+    {
+      "name": "drive_create_folder",
+      "description": "Create a folder.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "parent_path": { "type": "string", "default": "/" },
+          "folder_name": { "type": "string" },
+          "conflict_behavior": { "type": "string", "enum": ["fail", "replace", "rename"], "default": "rename" }
+        },
+        "required": ["folder_name"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "item": { "$ref": "#/definitions/DriveItem" } }
+      }
+    },
+    {
+      "name": "drive_delete_item",
+      "description": "Delete an item.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "item_id": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } }
+      }
+    },
+    {
+      "name": "drive_share_create_link",
+      "description": "Create a sharing link.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "drive_id": { "type": "string" },
+          "item_id": { "type": "string" },
+          "path": { "type": "string" },
+          "link_type": { "type": "string", "enum": ["view", "edit"], "default": "view" },
+          "scope": { "type": "string", "enum": ["anonymous", "organization"], "default": "organization" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "link_url": { "type": "string" },
+          "link_type": { "type": "string" },
+          "scope": { "type": "string" }
+        }
+      }
+    }
+  ]
+}
