@@ -48,6 +48,8 @@ All of the above are documented in **[`design/`](./design/)**.
 
 ```
 .
+├── .github/
+│   └── workflows/          # CI
 ├── design/
 │   ├── architecture.md
 │   ├── auth-oauth2-pkce.md
@@ -68,6 +70,7 @@ All of the above are documented in **[`design/`](./design/)**.
 ├── client/                # sample MCP client
 ├── load-tests/            # Locust load testing
 ├── Makefile               # common workflows
+├── Dockerfile             # container image
 └── README.md              # you are here
 ```
 

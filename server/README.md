@@ -26,3 +26,10 @@ export DATADOG_API_KEY="..."
 
 uvicorn msgraph_mcp.app:app --host 0.0.0.0 --port 8080
 ```
+
+## Docker
+
+```bash
+docker build -t msgraph-mcp:local .
+docker run --rm -p 8080:8080 msgraph-mcp:local
+```
