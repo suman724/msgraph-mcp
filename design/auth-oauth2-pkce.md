@@ -30,7 +30,7 @@ This document defines the delegated OAuth2 flow used by the MCP server to access
 5. Microsoft redirects to `redirect_uri` with `code` + `state`.
 6. Client calls `auth_complete_pkce` with `code`, `state`, and `redirect_uri`.
 7. MCP Server exchanges code for tokens and stores refresh token securely.
-8. MCP Server returns a server-managed `mcp_session_id` bound to user + tenant.
+8. MCP Server returns a server-managed `graph_session_id` bound to user + tenant.
 
 **Security**
 - Use PKCE S256 only.
@@ -66,7 +66,7 @@ This document defines the delegated OAuth2 flow used by the MCP server to access
 - `redirect_uri`
 
 **Output**:
-- `mcp_session_id`
+- `graph_session_id`
 - `granted_scopes`
 - `expires_in`
 
@@ -93,7 +93,7 @@ This document defines the delegated OAuth2 flow used by the MCP server to access
 - Refresh tokens and session metadata are stored in **Redis** only.
 - Access tokens are cached in Redis and expire **5 minutes ahead** of token expiry.
 - Redis token entries are encrypted at the application layer before storage.
-- Session handle (`mcp_session_id`) maps to a single user + tenant + client_id.
+- Session handle (`graph_session_id`) maps to a single user + tenant + client_id.
 
 **Never return tokens to MCP clients.** The MCP server is the only token holder.
 

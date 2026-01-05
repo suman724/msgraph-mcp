@@ -11,4 +11,4 @@ locust -f locustfile.py --host http://localhost:8080
 Environment variables:
 
 - `MCP_CLIENT_JWT`
-- `MCP_SESSION_ID`
+- `GRAPH_SESSION_ID`

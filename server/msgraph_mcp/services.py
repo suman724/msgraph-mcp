@@ -89,7 +89,7 @@ class AuthService:
         )
 
         return {
-            "mcp_session_id": session_id,
+            "graph_session_id": session_id,
             "granted_scopes": scopes,
             "expires_in": token_response.expires_in,
         }

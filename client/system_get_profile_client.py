@@ -103,9 +103,9 @@ def main() -> None:
         "auth_complete_pkce",
         {"code": code, "state": state, "redirect_uri": REDIRECT_URI},
     )
-    session_id = complete["mcp_session_id"]
+    session_id = complete["graph_session_id"]
 
-    profile = call_tool("system_get_profile", {"mcp_session_id": session_id})
+    profile = call_tool("system_get_profile", {"graph_session_id": session_id})
     print(json.dumps(profile, indent=2))
 
 

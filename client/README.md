@@ -15,4 +15,4 @@ Set the following env vars:
 - `MCP_CLIENT_JWT`
 - `MCP_REDIRECT_URI` (default: http://localhost:8000/callback)
 - `MCP_SCOPES` (default: User.Read)
-- `MCP_SESSION_ID` (required for `sample_client.py` only)
+- `GRAPH_SESSION_ID` (required for `sample_client.py` only)
