@@ -45,6 +45,8 @@ All of the above are documented in **[`design/`](./design/)**.
 ---
 
 ## Repository structure (proposed)
+
+```
 .
 ├── design/
 │   ├── architecture.md
@@ -67,6 +69,7 @@ All of the above are documented in **[`design/`](./design/)**.
 ├── load-tests/            # Locust load testing
 ├── Makefile               # common workflows
 └── README.md              # you are here
+```
 
 ---
 
