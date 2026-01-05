@@ -33,3 +33,9 @@ uvicorn msgraph_mcp.app:app --host 0.0.0.0 --port 8080
 docker build -t msgraph-mcp:local .
 docker run --rm -p 8080:8080 msgraph-mcp:local
 ```
+
+## Tests
+
+```bash
+pytest
+```

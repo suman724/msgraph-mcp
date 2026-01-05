@@ -1,5 +1,7 @@
 # MCP Servers for Microsoft Graph (Email, Calendar, OneDrive)
 
+[![CI](https://github.com/suman724/msgraph-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/suman724/msgraph-mcp/actions/workflows/ci.yml)
+
 Design-first project to build **Model Context Protocol (MCP) Servers** that expose **Microsoft Graph** capabilities—**Mail**, **Calendar**, and **OneDrive/Files**—as well-defined MCP tools with clear parameter schemas, production-grade auth, and operational resiliency.
 
 > 📌 **Detailed design docs live in [`design/`](./design/)** (architecture, dataflows, tool catalog, schemas, auth, scaling, resiliency, and references).
@@ -27,7 +29,6 @@ We want a clean, production-ready way for **agentic applications** to access Mic
 
 ### Out-of-scope (for now)
 - Implementing the agentic apps themselves (will come after MCP servers are ready)
-
 
 ---
 
@@ -88,6 +89,12 @@ Set required env vars (see `server/README.md`), then run:
 
 ```bash
 make server
+```
+
+## CI and tests
+
+```bash
+make ci
 ```
 
 ## Terraform (existing VPC/cluster/ALB)

@@ -925,6 +925,7 @@ Include:
 
 - Unit tests for schema validation and normalization
 - Contract tests against Graph (mock + optional live tenant)
+- CI runs ruff/pytest and builds the Docker image
 - Chaos testing for throttling and token revocation
 - Security tests: token encryption, redaction, access controls
 
