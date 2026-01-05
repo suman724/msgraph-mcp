@@ -1,5 +1,3 @@
-from typing import Any
-
 from .auth import OIDCValidator
 from .cache import RedisCache
 from .errors import MCPError

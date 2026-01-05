@@ -1,12 +1,19 @@
-.PHONY: help fmt lint test server client load-tests terraform-init terraform-apply terraform-plan docker-build docker-run ci
+.PHONY: help fmt lint test server client load-tests terraform-init terraform-apply terraform-plan docker-build docker-run ci venv
+
+ROOT_DIR := $(shell pwd)
+VENV_BIN := $(ROOT_DIR)/.venv/bin
+RUFF := $(if $(wildcard $(VENV_BIN)/ruff),$(VENV_BIN)/ruff,ruff)
+PYTEST := $(if $(wildcard $(VENV_BIN)/pytest),$(VENV_BIN)/pytest,pytest)
+PYTHON := $(if $(wildcard $(VENV_BIN)/python),$(VENV_BIN)/python,python)
 
 help:
 	@echo "Targets:"
+	@echo "  venv           Create local virtual environment"
 	@echo "  fmt            Format Python code (ruff)"
 	@echo "  lint           Lint Python code (ruff)"
 	@echo "  test           Run Python tests (pytest)"
 	@echo "  server         Run MCP server locally"
-	@echo "  client         Run sample client"
+	@echo "  client         Run sample MCP client"
 	@echo "  load-tests     Run Locust load tests"
 	@echo "  docker-build   Build Docker image"
 	@echo "  docker-run     Run Docker image"
@@ -15,20 +22,25 @@ help:
 	@echo "  terraform-apply Apply Terraform"
 	@echo "  ci             Run lint + tests"
 
+venv:
+	@$(PYTHON) -m venv .venv
+	@echo "Activate with: source .venv/bin/activate"
+	@. .venv/bin/activate && pip install -e server[dev]
+
 fmt:
-	@cd server && ruff format .
+	@cd server && $(RUFF) format .
 
 lint:
-	@cd server && ruff check .
+	@cd server && $(RUFF) check .
 
 test:
-	@cd server && pytest
+	@cd server && $(PYTEST)
 
 server:
-	@cd server && python -m msgraph_mcp
+	@cd server && $(PYTHON) -m msgraph_mcp
 
 client:
-	@cd client && python sample_client.py
+	@cd client && $(PYTHON) sample_client.py
 
 load-tests:
 	@cd load-tests && locust -f locustfile.py --host http://localhost:8080

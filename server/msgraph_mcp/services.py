@@ -2,7 +2,6 @@ import base64
 import secrets
 import time
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 import jwt
