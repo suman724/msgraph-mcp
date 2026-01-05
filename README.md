@@ -91,6 +91,12 @@ Set required env vars (see `server/README.md`), then run:
 make server
 ```
 
+To run locally without Redis:
+
+```bash
+make dev-server-run
+```
+
 ## CI and tests
 
 ```bash

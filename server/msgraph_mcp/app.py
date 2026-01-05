@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from .auth import OIDCValidator
-from .cache import RedisCache
+from .cache import create_cache
 from .config import settings
 from .errors import MCPError, as_error_payload
 from .graph import GraphClient
@@ -16,8 +16,7 @@ from .telemetry import configure_telemetry, instrument_fastapi
 from .tools import calendar, drive, mail, platform
 
 try:
-    from mcp.server import Server
-    from mcp.server.fastapi import create_app as create_mcp_app
+    from mcp.server import FastMCP
 except ImportError as exc:  # pragma: no cover - runtime guard
     raise RuntimeError(
         "MCP SDK not installed. Install the official MCP Python SDK."
@@ -29,14 +28,14 @@ configure_telemetry(
     "msgraph-mcp", settings.otel_exporter_otlp_endpoint, settings.datadog_api_key
 )
 
-cache = RedisCache()
+cache = create_cache()
 graph = GraphClient()
 auth_service = AuthService(cache, graph)
 token_service = TokenService(cache)
 oidc_validator = OIDCValidator()
 session_resolver = SessionResolver(cache, oidc_validator)
 
-server = Server("msgraph-mcp")
+server = FastMCP(name="msgraph-mcp", streamable_http_path="/")
 
 
 def _idempotency_cache_key(session: dict, tool_name: str, key: str) -> str:
@@ -477,5 +476,5 @@ async def handle_mcp_error(_, exc: MCPError):
     return JSONResponse(status_code=exc.status, content=as_error_payload(exc))
 
 
-app.mount("/mcp", create_mcp_app(server))
+app.mount("/mcp", server.streamable_http_app())
 instrument_fastapi(app)

@@ -12,7 +12,7 @@ from .auth import (
     exchange_code_for_token,
     generate_pkce_pair,
 )
-from .cache import RedisCache
+from .cache import Cache
 from .config import settings
 from .errors import MCPError
 from .graph import GraphClient
@@ -25,7 +25,7 @@ class AuthBeginResponse:
 
 
 class AuthService:
-    def __init__(self, cache: RedisCache, graph: GraphClient) -> None:
+    def __init__(self, cache: Cache, graph: GraphClient) -> None:
         self._cache = cache
         self._graph = graph
 
@@ -96,7 +96,7 @@ class AuthService:
 
 
 class TokenService:
-    def __init__(self, cache: RedisCache) -> None:
+    def __init__(self, cache: Cache) -> None:
         self._cache = cache
 
     async def get_access_token(self, session: dict) -> str:

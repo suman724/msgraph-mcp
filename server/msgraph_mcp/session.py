@@ -1,10 +1,10 @@
 from .auth import OIDCValidator
-from .cache import RedisCache
+from .cache import Cache
 from .errors import MCPError
 
 
 class SessionResolver:
-    def __init__(self, cache: RedisCache, oidc: OIDCValidator) -> None:
+    def __init__(self, cache: Cache, oidc: OIDCValidator) -> None:
         self._cache = cache
         self._oidc = oidc
 

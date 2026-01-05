@@ -1,4 +1,4 @@
-.PHONY: help fmt lint test server client load-tests terraform-init terraform-apply terraform-plan docker-build docker-run ci venv
+.PHONY: help fmt lint test server client load-tests terraform-init terraform-apply terraform-plan docker-build docker-run ci venv dev-server-run
 
 ROOT_DIR := $(shell pwd)
 VENV_BIN := $(ROOT_DIR)/.venv/bin
@@ -21,6 +21,7 @@ help:
 	@echo "  terraform-plan Plan Terraform"
 	@echo "  terraform-apply Apply Terraform"
 	@echo "  ci             Run lint + tests"
+	@echo "  dev-server-run Run server locally without Redis"
 
 venv:
 	@$(PYTHON) -m venv .venv
@@ -38,6 +39,19 @@ test:
 
 server:
 	@cd server && $(PYTHON) -m msgraph_mcp
+
+dev-server-run:
+	@CACHE_MODE=memory \
+	GRAPH_CLIENT_ID=$${GRAPH_CLIENT_ID:-local-client} \
+	GRAPH_TENANT_ID=$${GRAPH_TENANT_ID:-organizations} \
+	GRAPH_REDIRECT_URI=$${GRAPH_REDIRECT_URI:-http://localhost:8080/callback} \
+	REDIS_ENDPOINT=$${REDIS_ENDPOINT:-unused} \
+	OIDC_ISSUER=$${OIDC_ISSUER:-https://issuer.example.com} \
+	OIDC_AUDIENCE=$${OIDC_AUDIENCE:-mcp} \
+	OIDC_JWKS_URL=$${OIDC_JWKS_URL:-https://issuer.example.com/.well-known/jwks.json} \
+	OTEL_EXPORTER_OTLP_ENDPOINT=$${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp.example.com} \
+	DATADOG_API_KEY=$${DATADOG_API_KEY:-dev-key} \
+	$(PYTHON) -m msgraph_mcp
 
 client:
 	@cd client && $(PYTHON) sample_client.py

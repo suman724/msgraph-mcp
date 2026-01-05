@@ -23,6 +23,12 @@ export DATADOG_API_KEY="..."
 uvicorn msgraph_mcp.app:app --host 0.0.0.0 --port 8080
 ```
 
+## Local run without Redis
+
+```bash
+make dev-server-run
+```
+
 ## Docker
 
 ```bash

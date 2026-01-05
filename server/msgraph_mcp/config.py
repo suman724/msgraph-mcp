@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -11,8 +12,9 @@ class Settings(BaseSettings):
     graph_tenant_id: str = "organizations"
     graph_redirect_uri: str
 
-    redis_endpoint: str
-    redis_encryption_key: str
+    cache_mode: str = "redis"
+    redis_endpoint: str | None = None
+    redis_encryption_key: str | None = None
 
     oidc_issuer: str
     oidc_audience: str
@@ -32,6 +34,17 @@ class Settings(BaseSettings):
 
     max_retry_attempts: int = 4
     retry_base_seconds: float = 0.5
+
+    @model_validator(mode="after")
+    def validate_cache_mode(self) -> "Settings":
+        if self.cache_mode.lower() == "redis":
+            if not self.redis_endpoint:
+                raise ValueError("REDIS_ENDPOINT is required when CACHE_MODE=redis")
+            if not self.redis_encryption_key:
+                raise ValueError(
+                    "REDIS_ENCRYPTION_KEY is required when CACHE_MODE=redis"
+                )
+        return self
 
 
 settings = Settings()
