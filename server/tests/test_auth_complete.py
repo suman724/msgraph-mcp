@@ -10,38 +10,19 @@ class FakeCache:
         self.pkce = "verifier"
         self.session = None
         self.access = None
+        self.refresh = None
 
     def pop_pkce(self, _state):
         return self.pkce
 
-    def cache_session(self, session_id, payload):
+    def cache_session_with_expiry(self, session_id, payload, _expires_at):
         self.session = (session_id, payload)
 
     def cache_access_token(self, session_id, token, expires_in):
         self.access = (session_id, token, expires_in)
 
-
-class FakeTokenStore:
-    def __init__(self):
-        self.refresh = None
-        self.session = None
-
-    def store_refresh_token(
-        self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at
-    ):
-        self.refresh = (
-            tenant_id,
-            user_id,
-            client_id,
-            refresh_token,
-            scopes,
-            expires_at,
-        )
-
-    def store_session(
-        self, session_id, tenant_id, user_id, client_id, scopes, expires_at
-    ):
-        self.session = (session_id, tenant_id, user_id, client_id, scopes, expires_at)
+    def cache_refresh_token(self, session_id, refresh_token, scopes, expires_at):
+        self.refresh = (session_id, refresh_token, scopes, expires_at)
 
 
 class FakeGraph:
@@ -54,9 +35,8 @@ class FakeGraph:
 @pytest.mark.asyncio
 async def test_complete_pkce_stores_session(monkeypatch):
     cache = FakeCache()
-    store = FakeTokenStore()
     graph = FakeGraph()
-    service = AuthService(cache, store, graph)
+    service = AuthService(cache, graph)
 
     access_token = jwt.encode({"tid": "tenant-1"}, "secret", algorithm="HS256")
 
@@ -73,6 +53,5 @@ async def test_complete_pkce_stores_session(monkeypatch):
     result = await service.complete_pkce("code", "state", "http://localhost/callback")
 
     assert "mcp_session_id" in result
-    assert store.refresh[0] == "tenant-1"
-    assert store.session[1] == "tenant-1"
     assert cache.session[1]["user_id"] == "user-123"
+    assert cache.refresh[1] == "refresh"

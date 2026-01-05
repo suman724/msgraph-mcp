@@ -7,8 +7,7 @@ This document captures reliability, throttling, and scaling strategies for the M
 ## Capacity model
 
 - **Stateless MCP server** with horizontal scaling (HPA by CPU/RPS/latency).
-- **Redis hot cache** for access tokens, session metadata, and idempotency keys.
-- **DynamoDB** for durable refresh tokens and delta tokens.
+- **Redis cache** for access tokens, refresh tokens, session metadata, and idempotency keys.
 - **Bulkheads** by domain (Mail, Calendar, Drive) to prevent cross-domain starvation.
 
 **Redis deployment guidance (single region)**
@@ -53,7 +52,7 @@ flowchart TB
 
 - Write tools accept `idempotency_key` or `transaction_id`.
 - Cache results in Redis for 10-30 minutes.
-- Persist idempotency keys in DynamoDB with TTL for failover safety.
+- Idempotency keys are stored in Redis with TTL.
 - Use Graph transaction IDs where supported (e.g., event creation).
 
 ---
@@ -69,7 +68,7 @@ flowchart TB
 ## Incremental sync (optional)
 
 - Use delta queries for Mail and Drive to avoid repeated full scans.
-- Store delta tokens per user in DynamoDB.
+- Store delta tokens per user in Redis (best-effort).
 
 ---
 
@@ -78,7 +77,7 @@ flowchart TB
 - Token-bucket per tenant.
 - Priority lanes for interactive calls vs batch.
 - Separate worker pools for read vs write tools.
-- Rate-limit enforcement backed by Redis with a DynamoDB fallback.
+- Rate-limit enforcement backed by Redis.
 
 ---
 

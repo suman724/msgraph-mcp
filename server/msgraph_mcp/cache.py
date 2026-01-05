@@ -51,6 +51,35 @@ class RedisCache:
     def get_session(self, session_id: str) -> dict | None:
         return self.get_json(self._key("session", session_id))
 
+    def cache_session_with_expiry(
+        self, session_id: str, payload: dict, expires_at: int
+    ) -> None:
+        ttl = self._ttl_from_expires_at(expires_at)
+        self.set_json(self._key("session", session_id), payload, ttl)
+
+    def delete_session(self, session_id: str) -> None:
+        self._client.delete(self._key("session", session_id))
+
+    def cache_refresh_token(
+        self, session_id: str, refresh_token: str, scopes: list[str], expires_at: int
+    ) -> None:
+        ttl = self._ttl_from_expires_at(expires_at)
+        self.set_json(
+            self._key("refresh", session_id),
+            {
+                "refresh_token": refresh_token,
+                "scopes": scopes,
+                "expires_at": expires_at,
+            },
+            ttl,
+        )
+
+    def get_refresh_token(self, session_id: str) -> dict | None:
+        return self.get_json(self._key("refresh", session_id))
+
+    def delete_refresh_token(self, session_id: str) -> None:
+        self._client.delete(self._key("refresh", session_id))
+
     def cache_idempotency(self, key: str, payload: dict) -> None:
         self.set_json(
             self._key("idempotency", key), payload, settings.idempotency_ttl_seconds
@@ -70,3 +99,7 @@ class RedisCache:
 
     def now(self) -> int:
         return int(time.time())
+
+    def _ttl_from_expires_at(self, expires_at: int) -> int:
+        ttl = max(expires_at - self.now() - settings.access_token_skew_seconds, 30)
+        return ttl

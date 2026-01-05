@@ -13,13 +13,6 @@ class Settings(BaseSettings):
 
     redis_endpoint: str
 
-    ddb_table_tokens: str
-    ddb_table_sessions: str
-    ddb_table_delta: str
-    ddb_table_idempotency: str
-
-    kms_key_id: str
-
     oidc_issuer: str
     oidc_audience: str
     oidc_jwks_url: str
@@ -29,7 +22,7 @@ class Settings(BaseSettings):
 
     token_cache_ttl_seconds: int = 900
     idempotency_ttl_seconds: int = 1800
-    access_token_skew_seconds: int = 60
+    access_token_skew_seconds: int = 300
 
     max_base64_bytes: int = 100 * 1024 * 1024
 

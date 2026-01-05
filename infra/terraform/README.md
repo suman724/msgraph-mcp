@@ -1,6 +1,6 @@
 # Terraform - ECS Service (Existing VPC/Cluster/ALB)
 
-This Terraform config provisions the ECS service, task definition, DynamoDB tables, and Secrets Manager secrets for the MCP server. It assumes the VPC, ECS cluster, ALB, and target group already exist.
+This Terraform config provisions the ECS service, task definition, and Secrets Manager secrets for the MCP server. It assumes the VPC, ECS cluster, ALB, and target group already exist.
 
 ## Quick start
 
@@ -29,4 +29,3 @@ See `variables.tf` for the full list. Required inputs:
 ## Notes
 
 - Secrets are created with a bootstrap value (`REPLACE_ME`). Update them after provisioning.
-- DynamoDB tables are created by default. Set `create_dynamodb_tables=false` to use existing tables.

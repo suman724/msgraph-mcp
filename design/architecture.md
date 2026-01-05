@@ -55,11 +55,10 @@ The Model Context Protocol (MCP) enables agentic applications to call a server�
    - Handles redirect/callback and token exchange
    - Produces an internal **session handle** (never returns Graph tokens to clients)
 
-3. **Token Store**
+3. **Token Cache (Redis)**
 
-   - Durable storage for refresh tokens and user/tenant metadata
-   - Encryption at rest via envelope encryption (KMS)
-   - Optional: Redis hot-cache for access token and session metadata
+   - Redis-only storage for refresh tokens and session metadata
+   - Access tokens cached with TTLs that expire 5 minutes ahead of expiry
 
 4. **Graph Client Layer**
 
@@ -89,9 +88,8 @@ flowchart LR
   ECS --> Policy[Policy + Governance]
   ECS --> Graph[Microsoft Graph]
   ECS --> Redis[Redis Cache]
-  ECS --> DDB[DynamoDB]
-  ECS --> KMS[KMS]
-  DDB --> KMS
+  ECS --> Secrets[Secrets Manager]
+  Secrets --> KMS[KMS]
   ECS --> OTel[OpenTelemetry]
   OTel --> DD[Datadog]
 ```
@@ -114,7 +112,7 @@ This design assumes **Option A** (remote service) unless you choose otherwise la
 
 **Compute**
 - ECS Fargate service with auto-scaling on CPU/RPS/latency
-- Task IAM role with least privilege for DynamoDB, Redis, KMS, Secrets Manager
+- Task IAM role with least privilege for Redis, KMS, Secrets Manager
 - Stateless tasks; all session/token state externalized
 
 **Region**
@@ -122,46 +120,19 @@ This design assumes **Option A** (remote service) unless you choose otherwise la
 
 **Secrets and encryption**
 - App secrets stored in AWS Secrets Manager
-- KMS CMK for envelope encryption of refresh tokens and delta tokens
+- KMS CMK for Secrets Manager encryption
 
 **Observability**
 - CloudWatch logs and metrics for ECS tasks and ALB
 - Structured JSON logs with correlation IDs forwarded to log analytics
 
-### 3.4 Data storage model (DynamoDB + Redis)
+### 3.4 Data storage model (Redis-only)
 
-**DynamoDB tables (durable)**
-- `tokens`: refresh token and metadata
-  - PK: `tenant_id#user_id`, SK: `client_id`
-  - Attributes: encrypted refresh token, scopes, expires_at, created_at
-- `sessions`: mcp_session_id binding
-  - PK: `mcp_session_id`
-  - Attributes: tenant_id, user_id, client_id, scopes, expires_at
-- `delta_tokens`: per-user delta tokens for Mail/Drive
-  - PK: `tenant_id#user_id`, SK: `domain`
-  - Attributes: delta_token, updated_at
-- `idempotency`: durable idempotency for write tools
-  - PK: `tenant_id#user_id`, SK: `idempotency_key`
-  - Attributes: tool_name, request_hash, result_hash, created_at, ttl
-- `rate_limits` (optional, if Redis unavailable)
-  - PK: `tenant_id`, SK: `tool_name`
-  - Attributes: tokens, last_refill_at
-
-**Capacity guidance**
-- Prefer on-demand or autoscaling provisioned capacity with alarms on hot partitions.
-
-**Access patterns**
-- Store refresh token: `PutItem` into `tokens` with PK `tenant_id#user_id` and SK `client_id`.
-- Fetch refresh token: `GetItem` on `tokens` by PK/SK when access token expires.
-- Resolve session: `GetItem` on `sessions` by `mcp_session_id`; cache in Redis.
-- Persist delta token: `PutItem` on `delta_tokens` keyed by `tenant_id#user_id` + domain.
-- Read delta token: `GetItem` on `delta_tokens` by PK/SK before delta queries.
-- Idempotency check: `GetItem` on `idempotency` by PK/SK; if missing, `PutItem` with TTL.
-- Rate limit fallback: `UpdateItem` on `rate_limits` with conditional updates on token buckets.
-
-**Redis (hot cache)**
-- Access tokens, session metadata, idempotency hot cache, rate-limit counters
-- Short TTLs; Redis is not the source of truth for tokens
+**Redis (single source for tokens/sessions)**
+- Refresh tokens and session metadata are stored in Redis only.
+- Access tokens are cached with TTLs that expire **5 minutes ahead** of token expiry.
+- Idempotency keys and rate-limit counters are stored in Redis with TTLs.
+- No durable token store; clients must re-authenticate if Redis entries expire or are evicted.
 
 ---
 
@@ -176,7 +147,7 @@ This design assumes **Option A** (remote service) unless you choose otherwise la
 3. Client opens browser → user signs in and consents
 4. Microsoft redirects to `redirect_uri` with `code` + `state`
 5. Client calls `auth_complete_pkce` (code + state)
-6. MCP Server exchanges code for tokens, stores refresh token encrypted
+6. MCP Server exchanges code for tokens, stores refresh token in Redis
 7. MCP Server returns internal session binding (e.g., `mcp_session_id`)
 
 ```mermaid
@@ -233,7 +204,7 @@ Graph supports server-driven paging (`@odata.nextLink`) and skip tokens.
 For large mailboxes/drives, avoid repeated full scans:
 
 - Use Graph delta queries for Mail folders and Drive items
-- Persist per-user delta tokens securely
+- Persist per-user delta tokens in Redis (best-effort)
 
 ---
 
@@ -254,8 +225,8 @@ Start with minimal delegated scopes and grow only as needed.
 
 ### 5.2 Token handling
 
-- Encrypt refresh tokens at rest (envelope encryption)
-- Rotate encryption keys periodically
+- Store refresh tokens and session metadata in Redis only
+- Expire cached access tokens 5 minutes ahead of expiry
 - Store minimal metadata required for refresh and correlation
 - Support revocation handling (token refresh fails → re-auth required)
 
@@ -296,7 +267,7 @@ Audit event should include:
 
 - MCP server is stateless: scale via HPA (CPU/RPS/latency)
 - Use Redis for hot token/session cache and idempotency cache
-- Durable DB for refresh tokens and delta tokens
+- Redis-only storage for refresh tokens and delta tokens
 
 ### 6.2 Throttling and backoff
 
@@ -328,7 +299,6 @@ For side-effect tools:
 
 - Accept `idempotency_key` (UUID)
 - Cache results for a short TTL (e.g., 10–30 minutes) in Redis
-- Persist idempotency keys in DynamoDB with TTL for failover safety
 - For calendar event creation, pass Graph transaction IDs where supported (align with Microsoft guidance)
 
 ### 6.5 Timeouts and circuit breakers
@@ -927,7 +897,7 @@ Include:
 - Contract tests against Graph (mock + optional live tenant)
 - CI runs ruff/pytest and builds the Docker image
 - Chaos testing for throttling and token revocation
-- Security tests: token encryption, redaction, access controls
+- Security tests: token TTL handling, redaction, access controls
 
 ---
 
@@ -936,7 +906,7 @@ Include:
 1. MCP transport: HTTP vs stdio (recommend HTTP for 300K)
 2. Tenant model: single-tenant vs multi-tenant app registration
 3. Scope policy: minimal baseline and escalation process
-4. Storage choices: Postgres vs DynamoDB; Redis availability tier
+4. Redis availability tier and eviction policy
 5. Data retention: audit log retention and PII redaction rules
 
 ---
@@ -975,6 +945,6 @@ Discovery / ecosystem
 
 - **MCP Python SDK + transport:** Use **HTTP** transport (not stdio) for centralized governance, observability, and horizontal scaling. Let’s use the official python MCP SDK available at [https://github.com/modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk)
 
-- **Token storage and encryption:** Store refresh tokens and auth metadata in **DynamoDB**, with **Redis (ElastiCache)** as a hot cache for session/access-token metadata and idempotency keys. Encrypt sensitive fields using **application-level encryption (ALE)** with envelope keys managed by KMS.
+- **Token storage:** Store refresh tokens and auth metadata in **Redis** only, with TTLs that expire 5 minutes ahead of access-token expiry.
 
 - **Graph client wrapper:** Implement a thin wrapper around the Microsoft Graph SDK that standardizes retries/backoff, throttling handling (429/Retry-After), timeouts, correlation IDs, and response normalization.

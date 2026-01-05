@@ -109,35 +109,6 @@ variable "redis_endpoint" {
   description = "Redis endpoint (host:port)"
 }
 
-variable "dynamodb_table_tokens" {
-  type        = string
-  description = "DynamoDB table name for refresh tokens"
-  default     = ""
-}
-
-variable "dynamodb_table_sessions" {
-  type        = string
-  description = "DynamoDB table name for sessions"
-  default     = ""
-}
-
-variable "dynamodb_table_delta" {
-  type        = string
-  description = "DynamoDB table name for delta tokens"
-  default     = ""
-}
-
-variable "dynamodb_table_idempotency" {
-  type        = string
-  description = "DynamoDB table name for idempotency keys"
-  default     = ""
-}
-
-variable "create_dynamodb_tables" {
-  type        = bool
-  description = "Whether to create DynamoDB tables"
-  default     = true
-}
 
 variable "kms_key_alias" {
   type        = string

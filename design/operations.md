@@ -11,7 +11,7 @@ This document covers operational practices for the MCP server.
 - Blue/green or canary rollout for client wrapper changes.
 - Configuration via environment variables and secret manager references.
 - ECS Fargate service behind ALB in multi-AZ subnets.
-- Task IAM role with least-privilege access to DynamoDB, Redis, KMS, Secrets Manager.
+- Task IAM role with least-privilege access to Redis, KMS, Secrets Manager.
 - Use existing VPC, ECS cluster, and ALB; Terraform provisions the ECS service only.
 - Container images are pulled from an existing registry (no ECR provisioning).
 
@@ -30,8 +30,8 @@ flowchart LR
 **Required config**
 - Microsoft Entra app registration IDs and redirect URIs
 - Allowed tenants and consent policy
-- KMS key IDs for token encryption
-- DynamoDB and Redis endpoints
+- KMS key IDs for Secrets Manager
+- Redis endpoint
 - Rate-limit and concurrency settings
 ---
 
@@ -59,7 +59,7 @@ flowchart LR
 - Elevated 4xx/5xx rates per tool family
 - Sustained throttling spikes
 - Token refresh failure rate
-- Redis/DynamoDB latency or error spikes
+- Redis latency or error spikes
 - Circuit breaker open events
 
 ---
@@ -90,14 +90,9 @@ flowchart LR
 - Lower concurrency limits and increase backoff.
 - Enable feature flags to disable heavy tools (search, large list).
 
-**DynamoDB throttling**
-- Detect `ProvisionedThroughputExceeded` and elevated latency.
-- Temporarily scale RCU/WCU and reduce token refresh burst by staggering.
-- Validate hot partition patterns in `tokens` and `idempotency` tables.
-
 **Redis failover or cache loss**
 - Expect token refresh spike; activate singleflight/locking.
-- Fall back to DynamoDB for session and idempotency lookups.
+- Expect session/token loss; clients must re-authenticate.
 - Reduce request concurrency until cache warms.
 
 **Token refresh storm**
@@ -109,7 +104,6 @@ flowchart LR
 
 ## Backups and recovery
 
-- DynamoDB point-in-time recovery enabled.
 - Redis persistence strategy defined per environment.
 - Quarterly restore drills with validation.
 

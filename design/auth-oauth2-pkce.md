@@ -90,9 +90,8 @@ This document defines the delegated OAuth2 flow used by the MCP server to access
 
 ## Token storage and session binding
 
-- Refresh tokens and session metadata are stored in **DynamoDB**.
-- Sensitive fields are encrypted with **application-level envelope encryption** (KMS-managed keys).
-- **Redis** stores hot session metadata, access tokens, and idempotency keys with TTL.
+- Refresh tokens and session metadata are stored in **Redis** only.
+- Access tokens are cached in Redis and expire **5 minutes ahead** of token expiry.
 - Session handle (`mcp_session_id`) maps to a single user + tenant + client_id.
 
 **Never return tokens to MCP clients.** The MCP server is the only token holder.
@@ -123,4 +122,3 @@ Include `correlation_id` for all auth tool responses.
 - Support token revocation and conditional access changes.
 - Use short access token TTLs and refresh on demand.
 - Log sign-in failures and consent errors with redacted details.
-- Rotate encryption keys regularly and re-wrap tokens on rotation.

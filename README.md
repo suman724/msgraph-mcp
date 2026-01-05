@@ -66,7 +66,7 @@ All of the above are documented in **[`design/`](./design/)**.
 │   ├── decision-records/
 │   └── glossary.md
 ├── infra/
-│   └── terraform/          # ECS service + DynamoDB + Secrets Manager
+│   └── terraform/          # ECS service + Secrets Manager
 ├── server/                # Python MCP server implementation
 ├── client/                # sample MCP client
 ├── load-tests/            # Locust load testing

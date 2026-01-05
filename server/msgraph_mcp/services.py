@@ -16,7 +16,6 @@ from .cache import RedisCache
 from .config import settings
 from .errors import MCPError
 from .graph import GraphClient
-from .token_store import TokenStore
 
 
 @dataclass
@@ -26,11 +25,8 @@ class AuthBeginResponse:
 
 
 class AuthService:
-    def __init__(
-        self, cache: RedisCache, token_store: TokenStore, graph: GraphClient
-    ) -> None:
+    def __init__(self, cache: RedisCache, graph: GraphClient) -> None:
         self._cache = cache
-        self._token_store = token_store
         self._graph = graph
 
     def begin_pkce(
@@ -74,18 +70,10 @@ class AuthService:
         session_id = secrets.token_urlsafe(24)
         expires_at = int(time.time()) + token_response.expires_in
 
-        self._token_store.store_refresh_token(
-            tenant_id,
-            user_id,
-            settings.graph_client_id,
-            token_response.refresh_token,
-            scopes,
-            expires_at,
+        self._cache.cache_refresh_token(
+            session_id, token_response.refresh_token, scopes, expires_at
         )
-        self._token_store.store_session(
-            session_id, tenant_id, user_id, settings.graph_client_id, scopes, expires_at
-        )
-        self._cache.cache_session(
+        self._cache.cache_session_with_expiry(
             session_id,
             {
                 "tenant_id": tenant_id,
@@ -94,6 +82,7 @@ class AuthService:
                 "scopes": scopes,
                 "expires_at": expires_at,
             },
+            expires_at,
         )
         self._cache.cache_access_token(
             session_id, token_response.access_token, token_response.expires_in
@@ -107,29 +96,25 @@ class AuthService:
 
 
 class TokenService:
-    def __init__(self, cache: RedisCache, token_store: TokenStore) -> None:
+    def __init__(self, cache: RedisCache) -> None:
         self._cache = cache
-        self._token_store = token_store
 
     async def get_access_token(self, session: dict) -> str:
         cached = self._cache.get_access_token(session["session_id"])
         if cached:
             return cached
 
-        stored = self._token_store.get_refresh_token(
-            session["tenant_id"], session["user_id"], session["client_id"]
-        )
-        if not stored:
+        stored = self._cache.get_refresh_token(session["session_id"])
+        if not stored or not stored.get("refresh_token"):
             raise MCPError("AUTH_REQUIRED", "No refresh token", status=401)
 
-        token_response = await self._refresh_token(stored.refresh_token)
-        self._token_store.store_refresh_token(
-            session["tenant_id"],
-            session["user_id"],
-            session["client_id"],
+        token_response = await self._refresh_token(stored["refresh_token"])
+        expires_at = int(time.time()) + token_response.expires_in
+        self._cache.cache_refresh_token(
+            session["session_id"],
             token_response.refresh_token,
             token_response.scope.split(),
-            int(time.time()) + token_response.expires_in,
+            expires_at,
         )
         self._cache.cache_access_token(
             session["session_id"],

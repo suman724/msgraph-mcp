@@ -12,15 +12,15 @@ We need a production-grade MCP server for Microsoft Graph at ~300K users, deploy
 
 - Deploy the MCP server as an ECS Fargate service in an existing VPC, ECS cluster, and ALB (internal-only).
 - Use a single region (`us-east-1`) initially with four environments: dev, test, preprod, prod.
-- Use DynamoDB for durable token/session/delta/idempotency storage and Redis for hot caching.
-- Use application-level envelope encryption with KMS for sensitive token material.
+- Use Redis-only storage for tokens, sessions, and idempotency with TTL-based expiry.
+- Store tokens in Redis with TTL-based expiry; no durable token store.
 - Authenticate MCP clients with OIDC JWT (issuer/audience validation via JWKS).
 - Use the official MCP Python SDK and Python 3.12 for server implementation.
 - Use OpenTelemetry with Datadog as the telemetry backend.
 - Use Locust for load testing.
 - Limit base64 payloads to 100 MB and use OneDrive upload sessions for large files.
 - Do not use WAF; the service is internal-facing only.
-- Terraform provisions ECS service, DynamoDB tables, and Secrets Manager/KMS, but not VPC/ALB/ECR.
+- Terraform provisions ECS service and Secrets Manager/KMS, but not VPC/ALB/ECR.
 
 ## Consequences
 

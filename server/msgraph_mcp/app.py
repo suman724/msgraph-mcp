@@ -13,7 +13,6 @@ from .logging import configure_logging
 from .services import AuthService, TokenService
 from .session import SessionResolver
 from .telemetry import configure_telemetry, instrument_fastapi
-from .token_store import TokenStore
 from .tools import calendar, drive, mail, platform
 
 try:
@@ -31,12 +30,11 @@ configure_telemetry(
 )
 
 cache = RedisCache()
-token_store = TokenStore()
 graph = GraphClient()
-auth_service = AuthService(cache, token_store, graph)
-token_service = TokenService(cache, token_store)
+auth_service = AuthService(cache, graph)
+token_service = TokenService(cache)
 oidc_validator = OIDCValidator()
-session_resolver = SessionResolver(cache, token_store, oidc_validator)
+session_resolver = SessionResolver(cache, oidc_validator)
 
 server = Server("msgraph-mcp")
 
@@ -65,25 +63,11 @@ async def _idempotent(
     if cached and "result" in cached:
         return cached["result"]
 
-    stored = token_store.check_idempotency(
-        session["tenant_id"], session["user_id"], idempotency_key
-    )
-    if stored and stored.get("result"):
-        return json.loads(stored["result"])
-
     result = await handler()
     result_hash = hashlib.sha256(
         json.dumps(result, sort_keys=True).encode("utf-8")
     ).hexdigest()
     cache.cache_idempotency(cache_key, {"result": result, "hash": result_hash})
-    token_store.put_idempotency(
-        session["tenant_id"],
-        session["user_id"],
-        idempotency_key,
-        tool_name,
-        result,
-        result_hash,
-    )
     return result
 
 
@@ -121,6 +105,8 @@ async def auth_get_status(
 @server.tool("auth_logout")
 async def auth_logout(mcp_session_id: str, authorization: str | None = None) -> dict:
     await _resolve_session(mcp_session_id, authorization)
+    cache.delete_session(mcp_session_id)
+    cache.delete_refresh_token(mcp_session_id)
     return {"status": "logged_out"}
 
 
@@ -139,7 +125,9 @@ async def system_whoami(authorization: str | None = None) -> dict:
 
 
 @server.tool("system_get_profile")
-async def system_get_profile(mcp_session_id: str, authorization: str | None = None) -> dict:
+async def system_get_profile(
+    mcp_session_id: str, authorization: str | None = None
+) -> dict:
     session = await _resolve_session(mcp_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await platform.get_profile(graph, token)

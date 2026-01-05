@@ -1,15 +1,13 @@
-import time
-
 import pytest
 
 from msgraph_mcp.auth import TokenResponse
 from msgraph_mcp.services import TokenService
-from msgraph_mcp.token_store import StoredToken
 
 
 class FakeCache:
     def __init__(self):
         self.cached = None
+        self.refresh = None
 
     def get_access_token(self, _session_id):
         return None
@@ -17,27 +15,17 @@ class FakeCache:
     def cache_access_token(self, session_id, token, expires_in):
         self.cached = (session_id, token, expires_in)
 
+    def get_refresh_token(self, _session_id):
+        return {"refresh_token": "rt", "scopes": ["Mail.Read"], "expires_at": 3600}
 
-class FakeTokenStore:
-    def __init__(self):
-        self.stored = None
-
-    def get_refresh_token(self, tenant_id, user_id, client_id):
-        return StoredToken(
-            refresh_token="rt", scopes=["Mail.Read"], expires_at=int(time.time()) + 3600
-        )
-
-    def store_refresh_token(
-        self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at
-    ):
-        self.stored = (tenant_id, user_id, client_id, refresh_token, scopes, expires_at)
+    def cache_refresh_token(self, session_id, refresh_token, scopes, expires_at):
+        self.refresh = (session_id, refresh_token, scopes, expires_at)
 
 
 @pytest.mark.asyncio
 async def test_token_refresh_updates_store_and_cache(monkeypatch):
     cache = FakeCache()
-    store = FakeTokenStore()
-    service = TokenService(cache, store)
+    service = TokenService(cache)
 
     async def fake_refresh(_):
         return TokenResponse(
@@ -51,4 +39,4 @@ async def test_token_refresh_updates_store_and_cache(monkeypatch):
 
     assert token == "at"
     assert cache.cached[0] == "s1"
-    assert store.stored[0] == "t"
+    assert cache.refresh[0] == "s1"
