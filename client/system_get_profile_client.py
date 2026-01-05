@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 
-BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp")
+BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp/")
 CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "")
 REDIRECT_URI = os.getenv("MCP_REDIRECT_URI", "http://localhost:8000/callback")
 SCOPES = [s.strip() for s in os.getenv("MCP_SCOPES", "User.Read").split(",") if s.strip()]

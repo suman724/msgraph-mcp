@@ -3,7 +3,7 @@ import uuid
 
 import httpx
 
-BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp")
+BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp/")
 CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "")
 MCP_SESSION_ID = os.getenv("MCP_SESSION_ID", "")
 

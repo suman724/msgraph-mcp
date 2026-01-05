@@ -11,7 +11,7 @@ python system_get_profile_client.py
 
 Set the following env vars:
 
-- `MCP_BASE_URL` (default: http://localhost:8080/mcp)
+- `MCP_BASE_URL` (default: http://localhost:8080/mcp/)
 - `MCP_CLIENT_JWT`
 - `MCP_REDIRECT_URI` (default: http://localhost:8000/callback)
 - `MCP_SCOPES` (default: User.Read)

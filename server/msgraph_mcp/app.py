@@ -1,5 +1,6 @@
 import hashlib
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -24,9 +25,10 @@ except ImportError as exc:  # pragma: no cover - runtime guard
 
 
 configure_logging()
-configure_telemetry(
-    "msgraph-mcp", settings.otel_exporter_otlp_endpoint, settings.datadog_api_key
-)
+if not settings.disable_otel:
+    configure_telemetry(
+        "msgraph-mcp", settings.otel_exporter_otlp_endpoint, settings.datadog_api_key
+    )
 
 cache = create_cache()
 graph = GraphClient()
@@ -35,7 +37,12 @@ token_service = TokenService(cache)
 oidc_validator = OIDCValidator()
 session_resolver = SessionResolver(cache, oidc_validator)
 
-server = FastMCP(name="msgraph-mcp", streamable_http_path="/")
+server = FastMCP(
+    name="msgraph-mcp",
+    streamable_http_path="/",
+    stateless_http=True,
+)
+mcp_app = server.streamable_http_app()
 
 
 def _idempotency_cache_key(session: dict, tool_name: str, key: str) -> str:
@@ -470,7 +477,13 @@ async def drive_share_create_link(
     return await drive.create_share_link(graph, token, params)
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    async with server.session_manager.run():
+        yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.exception_handler(MCPError)
@@ -478,5 +491,5 @@ async def handle_mcp_error(_, exc: MCPError):
     return JSONResponse(status_code=exc.status, content=as_error_payload(exc))
 
 
-app.mount("/mcp", server.streamable_http_app())
+app.mount("/mcp", mcp_app)
 instrument_fastapi(app)

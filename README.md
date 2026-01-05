@@ -91,6 +91,15 @@ Set required env vars (see `server/README.md`), then run:
 make server
 ```
 
+To list tools over MCP (stateless HTTP):
+
+```bash
+curl -s http://localhost:8080/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
+```
+
 To run locally without Redis:
 
 ```bash
@@ -101,6 +110,12 @@ To disable OIDC validation for local testing:
 
 ```bash
 export DISABLE_OIDC_VALIDATION=true
+```
+
+To disable OpenTelemetry for local testing:
+
+```bash
+export DISABLE_OTEL=true
 ```
 
 ## CI and tests
