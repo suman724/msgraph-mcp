@@ -6,6 +6,7 @@ This sample uses JSON-RPC calls against the MCP HTTP endpoint. It assumes the se
 
 ```bash
 python sample_client.py
+python system_get_profile_client.py
 ```
 
 Set the following env vars:

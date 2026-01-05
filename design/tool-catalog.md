@@ -87,7 +87,10 @@ Schema file: `design/schemas/onedrive.tools.json`
 
 ## Platform tools
 
+Schema file: `design/schemas/system.tools.json`
+
 | Tool | Description |
 | --- | --- |
 | `system_health` | Health check for the MCP server |
 | `system_whoami` | Return authenticated caller info |
+| `system_get_profile` | Return Graph `/me` profile (id, displayName, UPN, mail) |

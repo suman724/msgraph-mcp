@@ -14,7 +14,7 @@ from .services import AuthService, TokenService
 from .session import SessionResolver
 from .telemetry import configure_telemetry, instrument_fastapi
 from .token_store import TokenStore
-from .tools import calendar, drive, mail
+from .tools import calendar, drive, mail, platform
 
 try:
     from mcp.server import Server
@@ -136,6 +136,13 @@ async def system_whoami(authorization: str | None = None) -> dict:
         bearer = authorization.split(" ", 1)[1]
     claims = await oidc_validator.validate(bearer)
     return {"claims": claims}
+
+
+@server.tool("system_get_profile")
+async def system_get_profile(mcp_session_id: str, authorization: str | None = None) -> dict:
+    session = await _resolve_session(mcp_session_id, authorization)
+    token = await token_service.get_access_token(session)
+    return await platform.get_profile(graph, token)
 
 
 @server.tool("mail_list_folders")

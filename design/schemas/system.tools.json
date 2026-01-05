@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "0.1",
+  "domain": "system",
+  "definitions": {
+    "ClaimSet": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "display_name": { "type": "string" },
+        "user_principal_name": { "type": "string" },
+        "mail": { "type": "string" }
+      },
+      "required": ["id"]
+    }
+  },
+  "tools": [
+    {
+      "name": "system_health",
+      "description": "Health check for the MCP server.",
+      "input_schema": { "type": "object", "properties": {} },
+      "output_schema": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } }
+      }
+    },
+    {
+      "name": "system_whoami",
+      "description": "Return authenticated caller info from OIDC JWT.",
+      "input_schema": { "type": "object", "properties": {} },
+      "output_schema": {
+        "type": "object",
+        "properties": { "claims": { "$ref": "#/definitions/ClaimSet" } }
+      }
+    },
+    {
+      "name": "system_get_profile",
+      "description": "Return Graph /me profile.",
+      "input_schema": { "type": "object", "properties": {} },
+      "output_schema": {
+        "type": "object",
+        "properties": { "profile": { "$ref": "#/definitions/Profile" } }
+      }
+    }
+  ]
+}
