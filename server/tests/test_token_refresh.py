@@ -23,9 +23,13 @@ class FakeTokenStore:
         self.stored = None
 
     def get_refresh_token(self, tenant_id, user_id, client_id):
-        return StoredToken(refresh_token="rt", scopes=["Mail.Read"], expires_at=int(time.time()) + 3600)
+        return StoredToken(
+            refresh_token="rt", scopes=["Mail.Read"], expires_at=int(time.time()) + 3600
+        )
 
-    def store_refresh_token(self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at):
+    def store_refresh_token(
+        self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at
+    ):
         self.stored = (tenant_id, user_id, client_id, refresh_token, scopes, expires_at)
 
 
@@ -36,7 +40,9 @@ async def test_token_refresh_updates_store_and_cache(monkeypatch):
     service = TokenService(cache, store)
 
     async def fake_refresh(_):
-        return TokenResponse(access_token="at", refresh_token="rt2", expires_in=3600, scope="Mail.Read")
+        return TokenResponse(
+            access_token="at", refresh_token="rt2", expires_in=3600, scope="Mail.Read"
+        )
 
     monkeypatch.setattr(service, "_refresh_token", fake_refresh)
 

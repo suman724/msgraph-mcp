@@ -21,7 +21,13 @@ def generate_pkce_pair() -> tuple[str, str]:
     return verifier, challenge
 
 
-def build_authorization_url(scopes: list[str], state: str, code_challenge: str, redirect_uri: str, login_hint: str | None) -> str:
+def build_authorization_url(
+    scopes: list[str],
+    state: str,
+    code_challenge: str,
+    redirect_uri: str,
+    login_hint: str | None,
+) -> str:
     scope_str = " ".join(scopes)
     url = (
         f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/authorize"
@@ -47,7 +53,9 @@ class TokenResponse:
     scope: str
 
 
-async def exchange_code_for_token(code: str, code_verifier: str, redirect_uri: str) -> TokenResponse:
+async def exchange_code_for_token(
+    code: str, code_verifier: str, redirect_uri: str
+) -> TokenResponse:
     url = f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/token"
     data = {
         "client_id": settings.graph_client_id,

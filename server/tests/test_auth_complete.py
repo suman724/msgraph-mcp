@@ -26,10 +26,21 @@ class FakeTokenStore:
         self.refresh = None
         self.session = None
 
-    def store_refresh_token(self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at):
-        self.refresh = (tenant_id, user_id, client_id, refresh_token, scopes, expires_at)
+    def store_refresh_token(
+        self, tenant_id, user_id, client_id, refresh_token, scopes, expires_at
+    ):
+        self.refresh = (
+            tenant_id,
+            user_id,
+            client_id,
+            refresh_token,
+            scopes,
+            expires_at,
+        )
 
-    def store_session(self, session_id, tenant_id, user_id, client_id, scopes, expires_at):
+    def store_session(
+        self, session_id, tenant_id, user_id, client_id, scopes, expires_at
+    ):
         self.session = (session_id, tenant_id, user_id, client_id, scopes, expires_at)
 
 

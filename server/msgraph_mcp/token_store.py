@@ -35,7 +35,9 @@ class TokenStore:
         self._idempotency_table = self._ddb.Table(settings.ddb_table_idempotency)
 
     def _encrypt(self, plaintext: str) -> dict:
-        data_key = self._kms.generate_data_key(KeyId=settings.kms_key_id, KeySpec="AES_256")
+        data_key = self._kms.generate_data_key(
+            KeyId=settings.kms_key_id, KeySpec="AES_256"
+        )
         nonce = os.urandom(12)
         aesgcm = AESGCM(data_key["Plaintext"])
         ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
@@ -48,11 +50,19 @@ class TokenStore:
     def _decrypt(self, payload: dict) -> str:
         data_key = self._kms.decrypt(CiphertextBlob=_b64d(payload["encrypted_key"]))
         aesgcm = AESGCM(data_key["Plaintext"])
-        plaintext = aesgcm.decrypt(_b64d(payload["nonce"]), _b64d(payload["ciphertext"]), None)
+        plaintext = aesgcm.decrypt(
+            _b64d(payload["nonce"]), _b64d(payload["ciphertext"]), None
+        )
         return plaintext.decode("utf-8")
 
     def store_refresh_token(
-        self, tenant_id: str, user_id: str, client_id: str, refresh_token: str, scopes: list[str], expires_at: int
+        self,
+        tenant_id: str,
+        user_id: str,
+        client_id: str,
+        refresh_token: str,
+        scopes: list[str],
+        expires_at: int,
     ) -> None:
         encrypted = self._encrypt(refresh_token)
         self._tokens_table.put_item(
@@ -65,8 +75,12 @@ class TokenStore:
             }
         )
 
-    def get_refresh_token(self, tenant_id: str, user_id: str, client_id: str) -> StoredToken | None:
-        response = self._tokens_table.get_item(Key={"pk": f"{tenant_id}#{user_id}", "sk": client_id})
+    def get_refresh_token(
+        self, tenant_id: str, user_id: str, client_id: str
+    ) -> StoredToken | None:
+        response = self._tokens_table.get_item(
+            Key={"pk": f"{tenant_id}#{user_id}", "sk": client_id}
+        )
         item = response.get("Item")
         if not item:
             return None
@@ -77,7 +91,15 @@ class TokenStore:
             expires_at=int(item.get("expires_at", 0)),
         )
 
-    def store_session(self, session_id: str, tenant_id: str, user_id: str, client_id: str, scopes: list[str], expires_at: int) -> None:
+    def store_session(
+        self,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+        client_id: str,
+        scopes: list[str],
+        expires_at: int,
+    ) -> None:
         self._sessions_table.put_item(
             Item={
                 "mcp_session_id": session_id,
@@ -93,7 +115,9 @@ class TokenStore:
         response = self._sessions_table.get_item(Key={"mcp_session_id": session_id})
         return response.get("Item")
 
-    def store_delta_token(self, tenant_id: str, user_id: str, domain: str, delta_token: str) -> None:
+    def store_delta_token(
+        self, tenant_id: str, user_id: str, domain: str, delta_token: str
+    ) -> None:
         self._delta_table.put_item(
             Item={
                 "pk": f"{tenant_id}#{user_id}",
@@ -104,18 +128,30 @@ class TokenStore:
         )
 
     def get_delta_token(self, tenant_id: str, user_id: str, domain: str) -> str | None:
-        response = self._delta_table.get_item(Key={"pk": f"{tenant_id}#{user_id}", "sk": domain})
+        response = self._delta_table.get_item(
+            Key={"pk": f"{tenant_id}#{user_id}", "sk": domain}
+        )
         item = response.get("Item")
         if not item:
             return None
         return item.get("delta_token")
 
-    def check_idempotency(self, tenant_id: str, user_id: str, idempotency_key: str) -> dict | None:
-        response = self._idempotency_table.get_item(Key={"pk": f"{tenant_id}#{user_id}", "sk": idempotency_key})
+    def check_idempotency(
+        self, tenant_id: str, user_id: str, idempotency_key: str
+    ) -> dict | None:
+        response = self._idempotency_table.get_item(
+            Key={"pk": f"{tenant_id}#{user_id}", "sk": idempotency_key}
+        )
         return response.get("Item")
 
     def put_idempotency(
-        self, tenant_id: str, user_id: str, idempotency_key: str, tool_name: str, result: dict, result_hash: str
+        self,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+        tool_name: str,
+        result: dict,
+        result_hash: str,
     ) -> None:
         ttl = int(time.time()) + settings.idempotency_ttl_seconds
         self._idempotency_table.put_item(

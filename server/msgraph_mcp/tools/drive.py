@@ -48,7 +48,12 @@ async def get_default_drive(graph: GraphClient, token: str) -> dict:
 
 async def list_children(graph: GraphClient, token: str, params: dict) -> dict:
     url = _item_url(params.get("drive_id"), params.get("item_id"), params.get("path"))
-    payload = await graph.request("GET", f"{url}/children", token, params=_pagination_params(params.get("pagination")))
+    payload = await graph.request(
+        "GET",
+        f"{url}/children",
+        token,
+        params=_pagination_params(params.get("pagination")),
+    )
     return {
         "items": [_map_item(item) for item in payload.get("value", [])],
         "next_cursor": _next_cursor(payload),
@@ -67,7 +72,9 @@ async def search(graph: GraphClient, token: str, params: dict) -> dict:
         raise MCPError("VALIDATION_ERROR", "Query is required")
     path = params.get("path") or "root"
     url = f"{settings.graph_base_url}/me/drive/{path}/search(q='{query}')"
-    payload = await graph.request("GET", url, token, params=_pagination_params(params.get("pagination")))
+    payload = await graph.request(
+        "GET", url, token, params=_pagination_params(params.get("pagination"))
+    )
     return {
         "items": [_map_item(item) for item in payload.get("value", [])],
         "next_cursor": _next_cursor(payload),
@@ -80,17 +87,27 @@ async def download_file(graph: GraphClient, token: str, params: dict) -> dict:
 
     if return_mode == "download_url":
         payload = await graph.request("GET", url, token)
-        return {"download_url": payload.get("@microsoft.graph.downloadUrl"), "size_bytes": payload.get("size")}
+        return {
+            "download_url": payload.get("@microsoft.graph.downloadUrl"),
+            "size_bytes": payload.get("size"),
+        }
 
-    max_bytes = min(params.get("max_bytes", settings.max_base64_bytes), settings.max_base64_bytes)
+    max_bytes = min(
+        params.get("max_bytes", settings.max_base64_bytes), settings.max_base64_bytes
+    )
     raw = await graph.request_raw("GET", f"{url}/content", token)
     if len(raw) > max_bytes:
         raise MCPError("VALIDATION_ERROR", "File too large for base64", status=413)
-    return {"content_base64": base64.b64encode(raw).decode("ascii"), "size_bytes": len(raw)}
+    return {
+        "content_base64": base64.b64encode(raw).decode("ascii"),
+        "size_bytes": len(raw),
+    }
 
 
 async def upload_small_file(graph: GraphClient, token: str, params: dict) -> dict:
-    content = decode_base64_payload(params.get("content_base64"), settings.max_base64_bytes)
+    content = decode_base64_payload(
+        params.get("content_base64"), settings.max_base64_bytes
+    )
     parent_path = params.get("parent_path", "/").strip("/")
     filename = params.get("filename")
     url = f"{settings.graph_base_url}/me/drive/root:/{parent_path}/{filename}:/content"
@@ -105,7 +122,9 @@ async def create_upload_session(graph: GraphClient, token: str, params: dict) ->
     url = f"{settings.graph_base_url}/me/drive/root:/{parent_path}/{filename}:/createUploadSession"
     payload = {
         "item": {
-            "@microsoft.graph.conflictBehavior": params.get("conflict_behavior", "rename"),
+            "@microsoft.graph.conflictBehavior": params.get(
+                "conflict_behavior", "rename"
+            ),
             "name": filename,
         }
     }
@@ -121,13 +140,17 @@ async def create_upload_session(graph: GraphClient, token: str, params: dict) ->
 
 async def upload_chunk(graph: GraphClient, token: str, params: dict) -> dict:
     upload_url = params.get("upload_url")
-    content = decode_base64_payload(params.get("content_base64"), settings.max_base64_bytes)
+    content = decode_base64_payload(
+        params.get("content_base64"), settings.max_base64_bytes
+    )
     start = params.get("chunk_start")
     end = params.get("chunk_end")
     total = params.get("total_size")
     headers = {"Content-Range": f"bytes {start}-{end}/{total}"}
 
-    response = await graph.request("PUT", upload_url, token, headers=headers, content=content)
+    response = await graph.request(
+        "PUT", upload_url, token, headers=headers, content=content
+    )
     return {
         "status": "in_progress" if "nextExpectedRanges" in response else "completed",
         "next_expected_ranges": response.get("nextExpectedRanges", []),
@@ -155,10 +178,17 @@ async def delete_item(graph: GraphClient, token: str, params: dict) -> dict:
 
 async def create_share_link(graph: GraphClient, token: str, params: dict) -> dict:
     url = _item_url(params.get("drive_id"), params.get("item_id"), params.get("path"))
-    payload = {"type": params.get("link_type", "view"), "scope": params.get("scope", "organization")}
+    payload = {
+        "type": params.get("link_type", "view"),
+        "scope": params.get("scope", "organization"),
+    }
     response = await graph.request("POST", f"{url}/createLink", token, json=payload)
     link = response.get("link", {})
-    return {"link_url": link.get("webUrl"), "link_type": link.get("type"), "scope": link.get("scope")}
+    return {
+        "link_url": link.get("webUrl"),
+        "link_type": link.get("type"),
+        "scope": link.get("scope"),
+    }
 
 
 def _map_drive(item: dict) -> dict:

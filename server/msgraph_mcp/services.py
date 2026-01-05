@@ -6,7 +6,12 @@ from dataclasses import dataclass
 import httpx
 import jwt
 
-from .auth import TokenResponse, build_authorization_url, exchange_code_for_token, generate_pkce_pair
+from .auth import (
+    TokenResponse,
+    build_authorization_url,
+    exchange_code_for_token,
+    generate_pkce_pair,
+)
 from .cache import RedisCache
 from .config import settings
 from .errors import MCPError
@@ -21,28 +26,46 @@ class AuthBeginResponse:
 
 
 class AuthService:
-    def __init__(self, cache: RedisCache, token_store: TokenStore, graph: GraphClient) -> None:
+    def __init__(
+        self, cache: RedisCache, token_store: TokenStore, graph: GraphClient
+    ) -> None:
         self._cache = cache
         self._token_store = token_store
         self._graph = graph
 
-    def begin_pkce(self, scopes: list[str], redirect_uri: str | None, login_hint: str | None) -> AuthBeginResponse:
+    def begin_pkce(
+        self, scopes: list[str], redirect_uri: str | None, login_hint: str | None
+    ) -> AuthBeginResponse:
         state = secrets.token_urlsafe(16)
         verifier, challenge = generate_pkce_pair()
         self._cache.cache_pkce(state, verifier)
-        url = build_authorization_url(scopes, state, challenge, redirect_uri or settings.graph_redirect_uri, login_hint)
+        url = build_authorization_url(
+            scopes,
+            state,
+            challenge,
+            redirect_uri or settings.graph_redirect_uri,
+            login_hint,
+        )
         return AuthBeginResponse(authorization_url=url, state=state)
 
-    async def complete_pkce(self, code: str, state: str, redirect_uri: str | None) -> dict:
+    async def complete_pkce(
+        self, code: str, state: str, redirect_uri: str | None
+    ) -> dict:
         verifier = self._cache.pop_pkce(state)
         if not verifier:
             raise MCPError("AUTH_REQUIRED", "Invalid or expired state", status=401)
-        token_response = await exchange_code_for_token(code, verifier, redirect_uri or settings.graph_redirect_uri)
+        token_response = await exchange_code_for_token(
+            code, verifier, redirect_uri or settings.graph_redirect_uri
+        )
 
-        claims = jwt.decode(token_response.access_token, options={"verify_signature": False})
+        claims = jwt.decode(
+            token_response.access_token, options={"verify_signature": False}
+        )
         tenant_id = claims.get("tid", "unknown")
 
-        me = await self._graph.request("GET", f"{settings.graph_base_url}/me", token_response.access_token)
+        me = await self._graph.request(
+            "GET", f"{settings.graph_base_url}/me", token_response.access_token
+        )
         user_id = me.get("id")
         if not user_id:
             raise MCPError("UPSTREAM_ERROR", "Unable to resolve user", status=502)
@@ -51,8 +74,17 @@ class AuthService:
         session_id = secrets.token_urlsafe(24)
         expires_at = int(time.time()) + token_response.expires_in
 
-        self._token_store.store_refresh_token(tenant_id, user_id, settings.graph_client_id, token_response.refresh_token, scopes, expires_at)
-        self._token_store.store_session(session_id, tenant_id, user_id, settings.graph_client_id, scopes, expires_at)
+        self._token_store.store_refresh_token(
+            tenant_id,
+            user_id,
+            settings.graph_client_id,
+            token_response.refresh_token,
+            scopes,
+            expires_at,
+        )
+        self._token_store.store_session(
+            session_id, tenant_id, user_id, settings.graph_client_id, scopes, expires_at
+        )
         self._cache.cache_session(
             session_id,
             {
@@ -63,7 +95,9 @@ class AuthService:
                 "expires_at": expires_at,
             },
         )
-        self._cache.cache_access_token(session_id, token_response.access_token, token_response.expires_in)
+        self._cache.cache_access_token(
+            session_id, token_response.access_token, token_response.expires_in
+        )
 
         return {
             "mcp_session_id": session_id,
@@ -82,7 +116,9 @@ class TokenService:
         if cached:
             return cached
 
-        stored = self._token_store.get_refresh_token(session["tenant_id"], session["user_id"], session["client_id"])
+        stored = self._token_store.get_refresh_token(
+            session["tenant_id"], session["user_id"], session["client_id"]
+        )
         if not stored:
             raise MCPError("AUTH_REQUIRED", "No refresh token", status=401)
 
@@ -95,7 +131,11 @@ class TokenService:
             token_response.scope.split(),
             int(time.time()) + token_response.expires_in,
         )
-        self._cache.cache_access_token(session["session_id"], token_response.access_token, token_response.expires_in)
+        self._cache.cache_access_token(
+            session["session_id"],
+            token_response.access_token,
+            token_response.expires_in,
+        )
         return token_response.access_token
 
     async def _refresh_token(self, refresh_token: str) -> TokenResponse:

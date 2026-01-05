@@ -27,7 +27,9 @@ def _next_cursor(payload: dict) -> str | None:
     return None
 
 
-async def list_calendars(graph: GraphClient, token: str, pagination: dict | None) -> dict:
+async def list_calendars(
+    graph: GraphClient, token: str, pagination: dict | None
+) -> dict:
     payload = await graph.request(
         "GET",
         f"{settings.graph_base_url}/me/calendars",
@@ -71,7 +73,9 @@ async def list_events(graph: GraphClient, token: str, params: dict) -> dict:
 
 
 async def get_event(graph: GraphClient, token: str, event_id: str) -> dict:
-    payload = await graph.request("GET", f"{settings.graph_base_url}/me/events/{event_id}", token)
+    payload = await graph.request(
+        "GET", f"{settings.graph_base_url}/me/events/{event_id}", token
+    )
     return {"event": _map_event(payload)}
 
 
@@ -84,7 +88,9 @@ async def create_event(graph: GraphClient, token: str, params: dict) -> dict:
         "location": {"displayName": params.get("location")},
         "attendees": [_map_attendee(a) for a in params.get("attendees", [])],
         "isOnlineMeeting": params.get("is_online_meeting", False),
-        "onlineMeetingProvider": params.get("online_meeting_provider", "teamsForBusiness"),
+        "onlineMeetingProvider": params.get(
+            "online_meeting_provider", "teamsForBusiness"
+        ),
     }
     calendar_id = params.get("calendar_id")
     url = f"{settings.graph_base_url}/me/events"
@@ -94,13 +100,19 @@ async def create_event(graph: GraphClient, token: str, params: dict) -> dict:
     return {"event_id": response.get("id"), "event": _map_event(response)}
 
 
-async def update_event(graph: GraphClient, token: str, event_id: str, patch: dict) -> dict:
-    await graph.request("PATCH", f"{settings.graph_base_url}/me/events/{event_id}", token, json=patch)
+async def update_event(
+    graph: GraphClient, token: str, event_id: str, patch: dict
+) -> dict:
+    await graph.request(
+        "PATCH", f"{settings.graph_base_url}/me/events/{event_id}", token, json=patch
+    )
     return {"status": "ok"}
 
 
 async def delete_event(graph: GraphClient, token: str, event_id: str) -> dict:
-    await graph.request("DELETE", f"{settings.graph_base_url}/me/events/{event_id}", token)
+    await graph.request(
+        "DELETE", f"{settings.graph_base_url}/me/events/{event_id}", token
+    )
     return {"status": "ok"}
 
 
@@ -117,7 +129,12 @@ async def respond_to_invite(graph: GraphClient, token: str, params: dict) -> dic
         "comment": params.get("comment", ""),
         "sendResponse": params.get("send_response", True),
     }
-    await graph.request("POST", f"{settings.graph_base_url}/me/events/{params['event_id']}/{endpoint}", token, json=payload)
+    await graph.request(
+        "POST",
+        f"{settings.graph_base_url}/me/events/{params['event_id']}/{endpoint}",
+        token,
+        json=payload,
+    )
     return {"status": "ok"}
 
 
@@ -128,7 +145,12 @@ async def find_availability(graph: GraphClient, token: str, params: dict) -> dic
         "endTime": {"dateTime": params.get("end_datetime"), "timeZone": "UTC"},
         "availabilityViewInterval": params.get("interval_minutes", 30),
     }
-    response = await graph.request("POST", f"{settings.graph_base_url}/me/calendar/getSchedule", token, json=payload)
+    response = await graph.request(
+        "POST",
+        f"{settings.graph_base_url}/me/calendar/getSchedule",
+        token,
+        json=payload,
+    )
     slots = []
     for schedule in response.get("value", []):
         for item in schedule.get("scheduleItems", []):
@@ -161,14 +183,20 @@ def _map_datetime(value: str | None, timezone: str | None) -> dict:
 
 
 def _map_attendee(entry: dict) -> dict:
-    return {"emailAddress": {"address": entry.get("email"), "name": entry.get("name")}, "type": "required"}
+    return {
+        "emailAddress": {"address": entry.get("email"), "name": entry.get("name")},
+        "type": "required",
+    }
 
 
 def _map_event(event: dict) -> dict:
     return {
         "id": event.get("id"),
         "subject": event.get("subject"),
-        "body": {"content_type": event.get("body", {}).get("contentType", "html").lower(), "content": event.get("body", {}).get("content")},
+        "body": {
+            "content_type": event.get("body", {}).get("contentType", "html").lower(),
+            "content": event.get("body", {}).get("content"),
+        },
         "start_datetime": event.get("start", {}).get("dateTime"),
         "end_datetime": event.get("end", {}).get("dateTime"),
         "timezone": event.get("start", {}).get("timeZone"),

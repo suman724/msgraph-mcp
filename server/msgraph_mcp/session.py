@@ -5,7 +5,9 @@ from .token_store import TokenStore
 
 
 class SessionResolver:
-    def __init__(self, cache: RedisCache, token_store: TokenStore, oidc: OIDCValidator) -> None:
+    def __init__(
+        self, cache: RedisCache, token_store: TokenStore, oidc: OIDCValidator
+    ) -> None:
         self._cache = cache
         self._token_store = token_store
         self._oidc = oidc

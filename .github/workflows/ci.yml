@@ -27,3 +27,6 @@ jobs:
         run: |
           cd server
           pytest
+      - name: Docker build
+        run: |
+          docker build -t msgraph-mcp:ci .

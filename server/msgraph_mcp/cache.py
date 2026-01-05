@@ -44,13 +44,17 @@ class RedisCache:
         return None
 
     def cache_session(self, session_id: str, payload: dict) -> None:
-        self.set_json(self._key("session", session_id), payload, settings.token_cache_ttl_seconds)
+        self.set_json(
+            self._key("session", session_id), payload, settings.token_cache_ttl_seconds
+        )
 
     def get_session(self, session_id: str) -> dict | None:
         return self.get_json(self._key("session", session_id))
 
     def cache_idempotency(self, key: str, payload: dict) -> None:
-        self.set_json(self._key("idempotency", key), payload, settings.idempotency_ttl_seconds)
+        self.set_json(
+            self._key("idempotency", key), payload, settings.idempotency_ttl_seconds
+        )
 
     def get_idempotency(self, key: str) -> dict | None:
         return self.get_json(self._key("idempotency", key))

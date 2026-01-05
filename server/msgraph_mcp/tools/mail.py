@@ -27,11 +27,15 @@ def _next_cursor(payload: dict) -> str | None:
     return None
 
 
-async def list_folders(graph: GraphClient, token: str, include_hidden: bool, pagination: dict | None) -> dict:
+async def list_folders(
+    graph: GraphClient, token: str, include_hidden: bool, pagination: dict | None
+) -> dict:
     params = _pagination_params(pagination)
     if not include_hidden:
         params["$filter"] = "isHidden eq false"
-    payload = await graph.request("GET", f"{settings.graph_base_url}/me/mailFolders", token, params=params)
+    payload = await graph.request(
+        "GET", f"{settings.graph_base_url}/me/mailFolders", token, params=params
+    )
     return {
         "items": [
             {
@@ -87,16 +91,35 @@ async def list_messages(graph: GraphClient, token: str, params: dict) -> dict:
     }
 
 
-async def get_message(graph: GraphClient, token: str, message_id: str, include_body: bool, include_attachments: bool) -> dict:
+async def get_message(
+    graph: GraphClient,
+    token: str,
+    message_id: str,
+    include_body: bool,
+    include_attachments: bool,
+) -> dict:
     params = {}
-    select_fields = ["id", "subject", "from", "toRecipients", "ccRecipients", "bccRecipients", "receivedDateTime"]
+    select_fields = [
+        "id",
+        "subject",
+        "from",
+        "toRecipients",
+        "ccRecipients",
+        "bccRecipients",
+        "receivedDateTime",
+    ]
     if include_body:
         select_fields.append("body")
     if include_attachments:
         select_fields.append("attachments")
     params["$select"] = ",".join(select_fields)
 
-    payload = await graph.request("GET", f"{settings.graph_base_url}/me/messages/{message_id}", token, params=params)
+    payload = await graph.request(
+        "GET",
+        f"{settings.graph_base_url}/me/messages/{message_id}",
+        token,
+        params=params,
+    )
     return {
         "message": {
             "id": payload.get("id"),
@@ -120,7 +143,13 @@ async def search_messages(graph: GraphClient, token: str, params: dict) -> dict:
     query_params.update(_pagination_params(params.get("pagination")))
 
     headers = {"ConsistencyLevel": "eventual"}
-    payload = await graph.request("GET", f"{settings.graph_base_url}/me/messages", token, params=query_params, headers=headers)
+    payload = await graph.request(
+        "GET",
+        f"{settings.graph_base_url}/me/messages",
+        token,
+        params=query_params,
+        headers=headers,
+    )
     return {
         "items": [
             {
@@ -145,30 +174,55 @@ async def create_draft(graph: GraphClient, token: str, params: dict) -> dict:
         "ccRecipients": [_map_recipient_out(r) for r in params.get("cc", [])],
         "bccRecipients": [_map_recipient_out(r) for r in params.get("bcc", [])],
     }
-    response = await graph.request("POST", f"{settings.graph_base_url}/me/messages", token, json=payload)
+    response = await graph.request(
+        "POST", f"{settings.graph_base_url}/me/messages", token, json=payload
+    )
     return {"draft_id": response.get("id"), "message": response}
 
 
 async def send_draft(graph: GraphClient, token: str, draft_id: str) -> dict:
-    await graph.request("POST", f"{settings.graph_base_url}/me/messages/{draft_id}/send", token)
+    await graph.request(
+        "POST", f"{settings.graph_base_url}/me/messages/{draft_id}/send", token
+    )
     return {"status": "sent", "sent_message_id": draft_id}
 
 
-async def reply(graph: GraphClient, token: str, message_id: str, reply_all: bool, comment: dict) -> dict:
+async def reply(
+    graph: GraphClient, token: str, message_id: str, reply_all: bool, comment: dict
+) -> dict:
     endpoint = "replyAll" if reply_all else "reply"
     payload = {"comment": comment.get("content", "")}
-    await graph.request("POST", f"{settings.graph_base_url}/me/messages/{message_id}/{endpoint}", token, json=payload)
+    await graph.request(
+        "POST",
+        f"{settings.graph_base_url}/me/messages/{message_id}/{endpoint}",
+        token,
+        json=payload,
+    )
     return {"status": "sent", "sent_message_id": message_id}
 
 
-async def mark_read(graph: GraphClient, token: str, message_id: str, is_read: bool) -> dict:
-    await graph.request("PATCH", f"{settings.graph_base_url}/me/messages/{message_id}", token, json={"isRead": is_read})
+async def mark_read(
+    graph: GraphClient, token: str, message_id: str, is_read: bool
+) -> dict:
+    await graph.request(
+        "PATCH",
+        f"{settings.graph_base_url}/me/messages/{message_id}",
+        token,
+        json={"isRead": is_read},
+    )
     return {"status": "ok"}
 
 
-async def move_message(graph: GraphClient, token: str, message_id: str, destination_folder_id: str) -> dict:
+async def move_message(
+    graph: GraphClient, token: str, message_id: str, destination_folder_id: str
+) -> dict:
     payload = {"destinationId": destination_folder_id}
-    response = await graph.request("POST", f"{settings.graph_base_url}/me/messages/{message_id}/move", token, json=payload)
+    response = await graph.request(
+        "POST",
+        f"{settings.graph_base_url}/me/messages/{message_id}/move",
+        token,
+        json=payload,
+    )
     return {
         "status": "ok",
         "message_id": response.get("id"),
@@ -176,9 +230,17 @@ async def move_message(graph: GraphClient, token: str, message_id: str, destinat
     }
 
 
-async def get_attachment(graph: GraphClient, token: str, message_id: str, attachment_id: str, include_content_base64: bool) -> dict:
+async def get_attachment(
+    graph: GraphClient,
+    token: str,
+    message_id: str,
+    attachment_id: str,
+    include_content_base64: bool,
+) -> dict:
     payload = await graph.request(
-        "GET", f"{settings.graph_base_url}/me/messages/{message_id}/attachments/{attachment_id}", token
+        "GET",
+        f"{settings.graph_base_url}/me/messages/{message_id}/attachments/{attachment_id}",
+        token,
     )
     attachment = _map_attachment(payload)
     if include_content_base64:
@@ -200,7 +262,10 @@ def _map_recipient_out(entry: dict) -> dict:
 def _map_body(body: dict | None) -> dict | None:
     if not body:
         return None
-    return {"content_type": body.get("contentType", "html").lower(), "content": body.get("content")}
+    return {
+        "content_type": body.get("contentType", "html").lower(),
+        "content": body.get("content"),
+    }
 
 
 def _map_body_out(body: dict | None) -> dict:
