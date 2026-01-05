@@ -4,7 +4,7 @@ import uuid
 from locust import HttpUser, task, between
 
 CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "")
-MCP_SESSION_ID = os.getenv("MCP_SESSION_ID", "")
+GRAPH_SESSION_ID = os.getenv("GRAPH_SESSION_ID", "")
 
 
 def _payload(name: str, arguments: dict) -> dict:
@@ -26,7 +26,7 @@ class MCPUser(HttpUser):
     def list_folders(self):
         self.client.post(
             "/mcp",
-            json=_payload("mail_list_folders", {"mcp_session_id": MCP_SESSION_ID}),
+            json=_payload("mail_list_folders", {"graph_session_id": GRAPH_SESSION_ID}),
             headers=self.headers,
             name="mail_list_folders",
         )
@@ -37,7 +37,7 @@ class MCPUser(HttpUser):
             "/mcp",
             json=_payload(
                 "mail_list_messages",
-                {"mcp_session_id": MCP_SESSION_ID, "pagination": {"page_size": 10}},
+                {"graph_session_id": GRAPH_SESSION_ID, "pagination": {"page_size": 10}},
             ),
             headers=self.headers,
             name="mail_list_messages",

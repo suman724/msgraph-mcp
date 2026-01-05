@@ -19,8 +19,19 @@ export OIDC_AUDIENCE="mcp"
 export OIDC_JWKS_URL="https://issuer.example.com/.well-known/jwks.json"
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.datadoghq.com/api/v2/otlp"
 export DATADOG_API_KEY="..."
+export DISABLE_OIDC_VALIDATION="false"
+export DISABLE_OTEL="false"
 
 uvicorn msgraph_mcp.app:app --host 0.0.0.0 --port 8080
+```
+
+## MCP tools list
+
+```bash
+curl -s http://localhost:8080/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
 
 ## Local run without Redis

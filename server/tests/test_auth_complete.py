@@ -52,6 +52,6 @@ async def test_complete_pkce_stores_session(monkeypatch):
 
     result = await service.complete_pkce("code", "state", "http://localhost/callback")
 
-    assert "mcp_session_id" in result
+    assert "graph_session_id" in result
     assert cache.session[1]["user_id"] == "user-123"
     assert cache.refresh[1] == "refresh"

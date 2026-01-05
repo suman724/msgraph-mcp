@@ -149,7 +149,7 @@ This design assumes **Option A** (remote service) unless you choose otherwise la
 4. Microsoft redirects to `redirect_uri` with `code` + `state`
 5. Client calls `auth_complete_pkce` (code + state)
 6. MCP Server exchanges code for tokens, stores refresh token in Redis
-7. MCP Server returns internal session binding (e.g., `mcp_session_id`)
+7. MCP Server returns internal session binding (e.g., `graph_session_id`)
 
 ```mermaid
 sequenceDiagram
@@ -162,7 +162,7 @@ sequenceDiagram
   IdP-->>Client: redirect_uri?code&state
   Client->>Server: auth_complete_pkce(code, state)
   Server->>IdP: token exchange
-  Server-->>Client: mcp_session_id
+  Server-->>Client: graph_session_id
 ```
 
 **Important**

@@ -3,9 +3,9 @@ import uuid
 
 import httpx
 
-BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp")
+BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp/")
 CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "")
-MCP_SESSION_ID = os.getenv("MCP_SESSION_ID", "")
+GRAPH_SESSION_ID = os.getenv("GRAPH_SESSION_ID", "")
 
 
 def call_tool(name: str, arguments: dict) -> dict:
@@ -24,6 +24,6 @@ def call_tool(name: str, arguments: dict) -> dict:
 if __name__ == "__main__":
     result = call_tool(
         "mail_list_folders",
-        {"mcp_session_id": MCP_SESSION_ID, "include_hidden": False},
+        {"graph_session_id": GRAPH_SESSION_ID, "include_hidden": False},
     )
     print(result)

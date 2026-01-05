@@ -42,13 +42,15 @@ server:
 
 dev-server-run:
 	@CACHE_MODE=memory \
-	GRAPH_CLIENT_ID=$${GRAPH_CLIENT_ID:-local-client} \
-	GRAPH_TENANT_ID=$${GRAPH_TENANT_ID:-organizations} \
+	GRAPH_CLIENT_ID=$${GRAPH_CLIENT_ID:-a192db29-4eb3-4e48-bd66-ebc8b7696f6a} \
+	GRAPH_TENANT_ID=$${GRAPH_TENANT_ID:-2a6b82b7-6327-42b2-8bab-2fe690a05373} \
 	GRAPH_REDIRECT_URI=$${GRAPH_REDIRECT_URI:-http://localhost:8080/callback} \
 	REDIS_ENDPOINT=$${REDIS_ENDPOINT:-unused} \
 	OIDC_ISSUER=$${OIDC_ISSUER:-https://issuer.example.com} \
 	OIDC_AUDIENCE=$${OIDC_AUDIENCE:-mcp} \
 	OIDC_JWKS_URL=$${OIDC_JWKS_URL:-https://issuer.example.com/.well-known/jwks.json} \
+	DISABLE_OIDC_VALIDATION=$${DISABLE_OIDC_VALIDATION:-true} \
+	DISABLE_OTEL=$${DISABLE_OTEL:-true} \
 	OTEL_EXPORTER_OTLP_ENDPOINT=$${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp.example.com} \
 	DATADOG_API_KEY=$${DATADOG_API_KEY:-dev-key} \
 	$(PYTHON) -m msgraph_mcp

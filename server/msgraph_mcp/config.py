@@ -19,9 +19,11 @@ class Settings(BaseSettings):
     oidc_issuer: str
     oidc_audience: str
     oidc_jwks_url: str
+    disable_oidc_validation: bool = False
 
     otel_exporter_otlp_endpoint: str
     datadog_api_key: str
+    disable_otel: bool = False
 
     token_cache_ttl_seconds: int = 900
     idempotency_ttl_seconds: int = 1800
