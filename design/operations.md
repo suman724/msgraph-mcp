@@ -32,6 +32,7 @@ flowchart LR
 - Allowed tenants and consent policy
 - KMS key IDs for Secrets Manager
 - Redis endpoint
+- Redis encryption key (app-level encryption)
 - Rate-limit and concurrency settings
 ---
 

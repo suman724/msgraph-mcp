@@ -25,6 +25,7 @@ See `variables.tf` for the full list. Required inputs:
 - `target_group_arn`
 - `container_image`
 - `redis_endpoint`
+- `secret_redis_encryption_key`
 
 ## Notes
 

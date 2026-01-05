@@ -92,6 +92,7 @@ This document defines the delegated OAuth2 flow used by the MCP server to access
 
 - Refresh tokens and session metadata are stored in **Redis** only.
 - Access tokens are cached in Redis and expire **5 minutes ahead** of token expiry.
+- Redis token entries are encrypted at the application layer before storage.
 - Session handle (`mcp_session_id`) maps to a single user + tenant + client_id.
 
 **Never return tokens to MCP clients.** The MCP server is the only token holder.

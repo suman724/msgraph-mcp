@@ -133,6 +133,7 @@ This design assumes **Option A** (remote service) unless you choose otherwise la
 - Access tokens are cached with TTLs that expire **5 minutes ahead** of token expiry.
 - Idempotency keys and rate-limit counters are stored in Redis with TTLs.
 - No durable token store; clients must re-authenticate if Redis entries expire or are evicted.
+- Token entries are encrypted at the application layer before storage.
 
 ---
 

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     graph_redirect_uri: str
 
     redis_endpoint: str
+    redis_encryption_key: str
 
     oidc_issuer: str
     oidc_audience: str

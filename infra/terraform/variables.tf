@@ -109,6 +109,12 @@ variable "redis_endpoint" {
   description = "Redis endpoint (host:port)"
 }
 
+variable "secret_redis_encryption_key" {
+  type        = string
+  description = "Secrets Manager name for Redis encryption key"
+  default     = "redis-encryption-key"
+}
+
 
 variable "kms_key_alias" {
   type        = string

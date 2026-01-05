@@ -27,3 +27,13 @@ resource "aws_secretsmanager_secret_version" "datadog_api_key" {
   secret_id     = aws_secretsmanager_secret.datadog_api_key.id
   secret_string = var.secret_bootstrap_value
 }
+
+resource "aws_secretsmanager_secret" "redis_encryption_key" {
+  name       = "${local.name_prefix}-${var.secret_redis_encryption_key}"
+  kms_key_id = aws_kms_key.service.arn
+}
+
+resource "aws_secretsmanager_secret_version" "redis_encryption_key" {
+  secret_id     = aws_secretsmanager_secret.redis_encryption_key.id
+  secret_string = var.secret_bootstrap_value
+}

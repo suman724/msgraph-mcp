@@ -40,6 +40,10 @@ resource "aws_ecs_task_definition" "service" {
         {
           name      = "DATADOG_API_KEY"
           valueFrom = aws_secretsmanager_secret_version.datadog_api_key.arn
+        },
+        {
+          name      = "REDIS_ENCRYPTION_KEY"
+          valueFrom = aws_secretsmanager_secret_version.redis_encryption_key.arn
         }
       ]
       logConfiguration = {
