@@ -19,6 +19,7 @@ export OIDC_AUDIENCE="mcp"
 export OIDC_JWKS_URL="https://issuer.example.com/.well-known/jwks.json"
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.datadoghq.com/api/v2/otlp"
 export DATADOG_API_KEY="..."
+export DISABLE_OIDC_VALIDATION="false"
 
 uvicorn msgraph_mcp.app:app --host 0.0.0.0 --port 8080
 ```

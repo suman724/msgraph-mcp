@@ -1,5 +1,6 @@
 from .auth import OIDCValidator
 from .cache import Cache
+from .config import settings
 from .errors import MCPError
 
 
@@ -12,8 +13,10 @@ class SessionResolver:
         if not mcp_session_id:
             raise MCPError("AUTH_REQUIRED", "Missing session", status=401)
         if not bearer_token:
-            raise MCPError("AUTH_REQUIRED", "Missing client token", status=401)
-        await self._oidc.validate(bearer_token)
+            if not settings.disable_oidc_validation:
+                raise MCPError("AUTH_REQUIRED", "Missing client token", status=401)
+        if not settings.disable_oidc_validation and bearer_token:
+            await self._oidc.validate(bearer_token)
 
         cached = self._cache.get_session(mcp_session_id)
         if cached:

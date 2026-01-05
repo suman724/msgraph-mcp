@@ -119,6 +119,8 @@ async def system_whoami(authorization: str | None = None) -> dict:
     bearer = ""
     if authorization and authorization.lower().startswith("bearer "):
         bearer = authorization.split(" ", 1)[1]
+    if settings.disable_oidc_validation:
+        return {"claims": {}, "validation": "disabled"}
     claims = await oidc_validator.validate(bearer)
     return {"claims": claims}
 

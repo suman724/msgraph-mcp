@@ -97,6 +97,12 @@ To run locally without Redis:
 make dev-server-run
 ```
 
+To disable OIDC validation for local testing:
+
+```bash
+export DISABLE_OIDC_VALIDATION=true
+```
+
 ## CI and tests
 
 ```bash

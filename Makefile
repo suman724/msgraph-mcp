@@ -49,6 +49,7 @@ dev-server-run:
 	OIDC_ISSUER=$${OIDC_ISSUER:-https://issuer.example.com} \
 	OIDC_AUDIENCE=$${OIDC_AUDIENCE:-mcp} \
 	OIDC_JWKS_URL=$${OIDC_JWKS_URL:-https://issuer.example.com/.well-known/jwks.json} \
+	DISABLE_OIDC_VALIDATION=$${DISABLE_OIDC_VALIDATION:-true} \
 	OTEL_EXPORTER_OTLP_ENDPOINT=$${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp.example.com} \
 	DATADOG_API_KEY=$${DATADOG_API_KEY:-dev-key} \
 	$(PYTHON) -m msgraph_mcp
