@@ -48,7 +48,9 @@ class AuthService:
         verifier, challenge = generate_pkce_pair()
         normalized_scopes = normalize_scopes(scopes)
         effective_redirect_uri = redirect_uri or settings.graph_redirect_uri
-        self._cache.cache_pkce(state, verifier, normalized_scopes, effective_redirect_uri)
+        self._cache.cache_pkce(
+            state, verifier, normalized_scopes, effective_redirect_uri
+        )
         url = build_authorization_url(
             normalized_scopes,
             state,
@@ -144,7 +146,9 @@ class TokenService:
         )
         return token_response.access_token
 
-    async def _refresh_token(self, refresh_token: str, scopes: list[str]) -> TokenResponse:
+    async def _refresh_token(
+        self, refresh_token: str, scopes: list[str]
+    ) -> TokenResponse:
         url = f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/token"
         normalized_scopes = normalize_scopes(scopes)
         data = {

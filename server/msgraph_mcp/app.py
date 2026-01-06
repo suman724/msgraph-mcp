@@ -111,7 +111,9 @@ async def auth_get_status(
 
 
 @server.tool("auth_logout")
-async def auth_logout(graph_session_id: str, authorization: str | None = None) -> dict[str, Any]:
+async def auth_logout(
+    graph_session_id: str, authorization: str | None = None
+) -> dict[str, Any]:
     await _resolve_session(graph_session_id, authorization)
     cache.delete_session(graph_session_id)
     cache.delete_refresh_token(graph_session_id)
