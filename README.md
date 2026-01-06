@@ -100,6 +100,8 @@ curl -s http://localhost:8080/mcp/ \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
 
+Tool calls return JSON with `structuredContent` for machine parsing.
+
 To run locally without Redis:
 
 ```bash

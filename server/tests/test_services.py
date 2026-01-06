@@ -3,7 +3,7 @@ import base64
 import pytest
 
 from msgraph_mcp.errors import MCPError
-from msgraph_mcp.services import decode_base64_payload
+from msgraph_mcp.services import decode_base64_payload, normalize_scopes
 
 
 def test_decode_base64_payload_ok():
@@ -18,3 +18,8 @@ def test_decode_base64_payload_too_large():
     with pytest.raises(MCPError) as exc:
         decode_base64_payload(payload, max_bytes=10)
     assert exc.value.code == "VALIDATION_ERROR"
+
+
+def test_normalize_scopes_adds_offline_access_and_dedupes():
+    scopes = normalize_scopes(["User.Read", " offline_access ", "User.Read"])
+    assert scopes == ["User.Read", "offline_access"]

@@ -1,6 +1,8 @@
 import base64
 import hashlib
+import json
 import secrets
+from urllib.parse import urlencode
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,20 +31,23 @@ def build_authorization_url(
     login_hint: str | None,
 ) -> str:
     scope_str = " ".join(scopes)
-    url = (
-        f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/authorize"
-        f"?client_id={settings.graph_client_id}"
-        f"&response_type=code"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_mode=query"
-        f"&scope={scope_str}"
-        f"&state={state}"
-        f"&code_challenge={code_challenge}"
-        f"&code_challenge_method=S256"
-    )
+    params = {
+        "client_id": settings.graph_client_id,
+        "response_type": "code",
+        "redirect_uri": redirect_uri,
+        "response_mode": "query",
+        "scope": scope_str,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
     if login_hint:
-        url = f"{url}&login_hint={login_hint}"
-    return url
+        params["login_hint"] = login_hint
+    query = urlencode(params)
+    return (
+        f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/authorize"
+        f"?{query}"
+    )
 
 
 @dataclass
@@ -54,21 +59,35 @@ class TokenResponse:
 
 
 async def exchange_code_for_token(
-    code: str, code_verifier: str, redirect_uri: str
+    code: str, code_verifier: str, redirect_uri: str, scopes: list[str]
 ) -> TokenResponse:
     url = f"https://login.microsoftonline.com/{settings.graph_tenant_id}/oauth2/v2.0/token"
+    scope_value = " ".join(scopes) if scopes else "offline_access"
     data = {
         "client_id": settings.graph_client_id,
-        "scope": "offline_access",
+        "scope": scope_value,
         "code": code,
         "redirect_uri": redirect_uri,
         "grant_type": "authorization_code",
         "code_verifier": code_verifier,
     }
+    if settings.graph_client_secret:
+        data["client_secret"] = settings.graph_client_secret
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.post(url, data=data)
     if response.status_code >= 400:
-        raise MCPError("UPSTREAM_ERROR", "Token exchange failed", status=502)
+        detail = None
+        try:
+            payload = response.json()
+            detail = payload.get("error_description") or payload.get("error")
+            if not detail:
+                detail = json.dumps(payload)
+        except ValueError:
+            detail = response.text.strip() or None
+        message = "Token exchange failed"
+        if detail:
+            message = f"{message}: {detail}"
+        raise MCPError("UPSTREAM_ERROR", message, status=502)
     payload = response.json()
     return TokenResponse(
         access_token=payload["access_token"],

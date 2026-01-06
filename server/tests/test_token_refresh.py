@@ -27,7 +27,7 @@ async def test_token_refresh_updates_store_and_cache(monkeypatch):
     cache = FakeCache()
     service = TokenService(cache)
 
-    async def fake_refresh(_):
+    async def fake_refresh(_, _scopes):
         return TokenResponse(
             access_token="at", refresh_token="rt2", expires_in=3600, scope="Mail.Read"
         )

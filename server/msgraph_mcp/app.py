@@ -1,6 +1,7 @@
 import hashlib
 import json
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -40,6 +41,7 @@ session_resolver = SessionResolver(cache, oidc_validator)
 server = FastMCP(
     name="msgraph-mcp",
     streamable_http_path="/",
+    json_response=True,
     stateless_http=True,
 )
 mcp_app = server.streamable_http_app()
@@ -51,7 +53,7 @@ def _idempotency_cache_key(session: dict, tool_name: str, key: str) -> str:
 
 async def _resolve_session(
     graph_session_id: str | None, authorization: str | None
-) -> dict:
+) -> dict[str, Any]:
     bearer = ""
     if authorization and authorization.lower().startswith("bearer "):
         bearer = authorization.split(" ", 1)[1]
@@ -80,7 +82,7 @@ async def _idempotent(
 @server.tool("auth_begin_pkce")
 async def auth_begin_pkce(
     scopes: list[str], redirect_uri: str | None = None, login_hint: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     result = auth_service.begin_pkce(scopes, redirect_uri, login_hint)
     return {
         "authorization_url": result.authorization_url,
@@ -92,14 +94,14 @@ async def auth_begin_pkce(
 @server.tool("auth_complete_pkce")
 async def auth_complete_pkce(
     code: str, state: str, redirect_uri: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     return await auth_service.complete_pkce(code, state, redirect_uri)
 
 
 @server.tool("auth_get_status")
 async def auth_get_status(
     graph_session_id: str, authorization: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     return {
         "authenticated": True,
@@ -109,7 +111,9 @@ async def auth_get_status(
 
 
 @server.tool("auth_logout")
-async def auth_logout(graph_session_id: str, authorization: str | None = None) -> dict:
+async def auth_logout(
+    graph_session_id: str, authorization: str | None = None
+) -> dict[str, Any]:
     await _resolve_session(graph_session_id, authorization)
     cache.delete_session(graph_session_id)
     cache.delete_refresh_token(graph_session_id)
@@ -117,12 +121,12 @@ async def auth_logout(graph_session_id: str, authorization: str | None = None) -
 
 
 @server.tool("system_health")
-async def system_health() -> dict:
+async def system_health() -> dict[str, Any]:
     return {"status": "ok"}
 
 
 @server.tool("system_whoami")
-async def system_whoami(authorization: str | None = None) -> dict:
+async def system_whoami(authorization: str | None = None) -> dict[str, Any]:
     bearer = ""
     if authorization and authorization.lower().startswith("bearer "):
         bearer = authorization.split(" ", 1)[1]
@@ -135,7 +139,7 @@ async def system_whoami(authorization: str | None = None) -> dict:
 @server.tool("system_get_profile")
 async def system_get_profile(
     graph_session_id: str, authorization: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await platform.get_profile(graph, token)
@@ -147,7 +151,7 @@ async def mail_list_folders(
     authorization: str | None = None,
     include_hidden: bool = False,
     pagination: dict | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.list_folders(graph, token, include_hidden, pagination)
@@ -156,7 +160,7 @@ async def mail_list_folders(
 @server.tool("mail_list_messages")
 async def mail_list_messages(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.list_messages(graph, token, params)
@@ -169,7 +173,7 @@ async def mail_get_message(
     authorization: str | None = None,
     include_body: bool = True,
     include_attachments: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.get_message(
@@ -180,7 +184,7 @@ async def mail_get_message(
 @server.tool("mail_search_messages")
 async def mail_search_messages(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.search_messages(graph, token, params)
@@ -189,7 +193,7 @@ async def mail_search_messages(
 @server.tool("mail_create_draft")
 async def mail_create_draft(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -206,7 +210,7 @@ async def mail_send_draft(
     draft_id: str,
     authorization: str | None = None,
     idempotency_key: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -225,7 +229,7 @@ async def mail_reply(
     authorization: str | None = None,
     reply_all: bool = False,
     idempotency_key: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -242,7 +246,7 @@ async def mail_mark_read(
     message_id: str,
     is_read: bool,
     authorization: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.mark_read(graph, token, message_id, is_read)
@@ -254,7 +258,7 @@ async def mail_move_message(
     message_id: str,
     destination_folder_id: str,
     authorization: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.move_message(graph, token, message_id, destination_folder_id)
@@ -267,7 +271,7 @@ async def mail_get_attachment(
     attachment_id: str,
     authorization: str | None = None,
     include_content_base64: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await mail.get_attachment(
@@ -280,7 +284,7 @@ async def calendar_list_calendars(
     graph_session_id: str,
     authorization: str | None = None,
     pagination: dict | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await calendar.list_calendars(graph, token, pagination)
@@ -289,7 +293,7 @@ async def calendar_list_calendars(
 @server.tool("calendar_list_events")
 async def calendar_list_events(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await calendar.list_events(graph, token, params)
@@ -298,7 +302,7 @@ async def calendar_list_events(
 @server.tool("calendar_get_event")
 async def calendar_get_event(
     graph_session_id: str, event_id: str, authorization: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await calendar.get_event(graph, token, event_id)
@@ -307,7 +311,7 @@ async def calendar_get_event(
 @server.tool("calendar_create_event")
 async def calendar_create_event(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -325,7 +329,7 @@ async def calendar_update_event(
     patch: dict,
     authorization: str | None = None,
     idempotency_key: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -339,7 +343,7 @@ async def calendar_update_event(
 @server.tool("calendar_delete_event")
 async def calendar_delete_event(
     graph_session_id: str, event_id: str, authorization: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await calendar.delete_event(graph, token, event_id)
@@ -348,7 +352,7 @@ async def calendar_delete_event(
 @server.tool("calendar_respond_to_invite")
 async def calendar_respond_to_invite(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -362,7 +366,7 @@ async def calendar_respond_to_invite(
 @server.tool("calendar_find_availability")
 async def calendar_find_availability(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await calendar.find_availability(graph, token, params)
@@ -371,7 +375,7 @@ async def calendar_find_availability(
 @server.tool("drive_get_default")
 async def drive_get_default(
     graph_session_id: str, authorization: str | None = None
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.get_default_drive(graph, token)
@@ -380,7 +384,7 @@ async def drive_get_default(
 @server.tool("drive_list_children")
 async def drive_list_children(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.list_children(graph, token, params)
@@ -389,7 +393,7 @@ async def drive_list_children(
 @server.tool("drive_get_item")
 async def drive_get_item(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.get_item(graph, token, params)
@@ -398,7 +402,7 @@ async def drive_get_item(
 @server.tool("drive_search")
 async def drive_search(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.search(graph, token, params)
@@ -407,7 +411,7 @@ async def drive_search(
 @server.tool("drive_download_file")
 async def drive_download_file(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.download_file(graph, token, params)
@@ -416,7 +420,7 @@ async def drive_download_file(
 @server.tool("drive_upload_small_file")
 async def drive_upload_small_file(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -430,7 +434,7 @@ async def drive_upload_small_file(
 @server.tool("drive_create_upload_session")
 async def drive_create_upload_session(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await _idempotent(
@@ -444,7 +448,7 @@ async def drive_create_upload_session(
 @server.tool("drive_upload_chunk")
 async def drive_upload_chunk(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.upload_chunk(graph, token, params)
@@ -453,7 +457,7 @@ async def drive_upload_chunk(
 @server.tool("drive_create_folder")
 async def drive_create_folder(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.create_folder(graph, token, params)
@@ -462,7 +466,7 @@ async def drive_create_folder(
 @server.tool("drive_delete_item")
 async def drive_delete_item(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.delete_item(graph, token, params)
@@ -471,7 +475,7 @@ async def drive_delete_item(
 @server.tool("drive_share_create_link")
 async def drive_share_create_link(
     graph_session_id: str, authorization: str | None = None, **params
-) -> dict:
+) -> dict[str, Any]:
     session = await _resolve_session(graph_session_id, authorization)
     token = await token_service.get_access_token(session)
     return await drive.create_share_link(graph, token, params)
