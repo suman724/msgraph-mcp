@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
 
     graph_client_id: str
+    graph_client_secret: str | None = None
     graph_tenant_id: str = "organizations"
     graph_redirect_uri: str
 

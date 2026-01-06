@@ -10,6 +10,7 @@ source .venv/bin/activate
 pip install -e .
 
 export GRAPH_CLIENT_ID="..."
+export GRAPH_CLIENT_SECRET="..." # optional for confidential clients
 export GRAPH_TENANT_ID="organizations"
 export GRAPH_REDIRECT_URI="http://localhost:8080/callback"
 export REDIS_ENDPOINT="localhost:6379"
@@ -33,6 +34,12 @@ curl -s http://localhost:8080/mcp/ \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'
 ```
+
+Notes:
+
+- `GRAPH_REDIRECT_URI` must match the redirect URI registered in Entra ID.
+- Tool responses include `structuredContent` for machine parsing.
+- `offline_access` is automatically included in auth scopes for refresh tokens.
 
 ## Local run without Redis
 

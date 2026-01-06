@@ -1,33 +1,16 @@
 import json
 import os
 import threading
-import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
-import httpx
+from mcp_client import call_tool
 
 BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080/mcp/")
-CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "")
+CLIENT_JWT = os.getenv("MCP_CLIENT_JWT", "JWT_NOT_SET")
 REDIRECT_URI = os.getenv("MCP_REDIRECT_URI", "http://localhost:8000/callback")
 SCOPES = [s.strip() for s in os.getenv("MCP_SCOPES", "User.Read").split(",") if s.strip()]
-
-
-def call_tool(name: str, arguments: dict) -> dict:
-    payload = {
-        "jsonrpc": "2.0",
-        "id": str(uuid.uuid4()),
-        "method": "tools/call",
-        "params": {"name": name, "arguments": arguments},
-    }
-    headers = {"Authorization": f"Bearer {CLIENT_JWT}"}
-    response = httpx.post(BASE_URL, json=payload, headers=headers, timeout=30.0)
-    response.raise_for_status()
-    data = response.json()
-    if "error" in data:
-        raise RuntimeError(json.dumps(data["error"], indent=2))
-    return data.get("result", data)
 
 
 class CallbackHandler(BaseHTTPRequestHandler):
@@ -36,6 +19,7 @@ class CallbackHandler(BaseHTTPRequestHandler):
     callback_path = "/callback"
 
     def do_GET(self):
+        print("Received callback request:", self.path)
         parsed = urlparse(self.path)
         if parsed.path != self.callback_path:
             self.send_response(404)
@@ -86,7 +70,14 @@ def main() -> None:
     if not CLIENT_JWT:
         raise RuntimeError("MCP_CLIENT_JWT is required for client authentication")
 
-    begin = call_tool("auth_begin_pkce", {"scopes": SCOPES, "redirect_uri": REDIRECT_URI})
+    print("Starting authentication flow...")
+    begin = call_tool(
+        BASE_URL,
+        CLIENT_JWT,
+        "auth_begin_pkce",
+        {"scopes": SCOPES, "redirect_uri": REDIRECT_URI},
+    )
+    print("Response from begin_pkce:", json.dumps(begin, indent=2))
     auth_url = begin["authorization_url"]
 
     print("Open this URL if your browser doesn't open automatically:\n")
@@ -94,18 +85,26 @@ def main() -> None:
     webbrowser.open(auth_url)
 
     query_params = run_local_callback_server()
+    print("Received callback with query parameters:", json.dumps(query_params, indent=2))
     code = query_params.get("code")
     state = query_params.get("state")
     if not code or not state:
         raise RuntimeError(f"Missing code/state in callback: {query_params}")
 
+    print("Completing authentication flow...")
+
     complete = call_tool(
+        BASE_URL,
+        CLIENT_JWT,
         "auth_complete_pkce",
         {"code": code, "state": state, "redirect_uri": REDIRECT_URI},
     )
+    print("Response from complete_pkce:", json.dumps(complete, indent=2))
     session_id = complete["graph_session_id"]
 
-    profile = call_tool("system_get_profile", {"graph_session_id": session_id})
+    profile = call_tool(
+        BASE_URL, CLIENT_JWT, "system_get_profile", {"graph_session_id": session_id}
+    )
     print(json.dumps(profile, indent=2))
 
 

@@ -17,9 +17,11 @@ class Cache(Protocol):
 
     def get_access_token(self, session_id: str) -> str | None: ...
 
-    def cache_pkce(self, state: str, verifier: str) -> None: ...
+    def cache_pkce(
+        self, state: str, verifier: str, scopes: list[str], redirect_uri: str
+    ) -> None: ...
 
-    def pop_pkce(self, state: str) -> str | None: ...
+    def pop_pkce(self, state: str) -> dict | None: ...
 
     def cache_session_with_expiry(
         self, session_id: str, payload: dict, expires_at: int
@@ -81,15 +83,28 @@ class RedisCache:
             return None
         return payload.get("token")
 
-    def cache_pkce(self, state: str, verifier: str) -> None:
-        self.set_json(self._key("pkce", state), {"verifier": verifier}, 600)
+    def cache_pkce(
+        self, state: str, verifier: str, scopes: list[str], redirect_uri: str
+    ) -> None:
+        self.set_json(
+            self._key("pkce", state),
+            {"verifier": verifier, "scopes": scopes, "redirect_uri": redirect_uri},
+            600,
+        )
 
-    def pop_pkce(self, state: str) -> str | None:
+    def pop_pkce(self, state: str) -> dict | None:
         key = self._key("pkce", state)
         payload = self.get_json(key)
         if payload:
             self._client.delete(key)
-            return payload.get("verifier")
+            verifier = payload.get("verifier")
+            if not verifier:
+                return None
+            return {
+                "verifier": verifier,
+                "scopes": payload.get("scopes") or [],
+                "redirect_uri": payload.get("redirect_uri"),
+            }
         return None
 
     def cache_session(self, session_id: str, payload: dict) -> None:
@@ -197,15 +212,28 @@ class InMemoryCache:
             return None
         return payload.get("token")
 
-    def cache_pkce(self, state: str, verifier: str) -> None:
-        self._set(self._key("pkce", state), {"verifier": verifier}, 600)
+    def cache_pkce(
+        self, state: str, verifier: str, scopes: list[str], redirect_uri: str
+    ) -> None:
+        self._set(
+            self._key("pkce", state),
+            {"verifier": verifier, "scopes": scopes, "redirect_uri": redirect_uri},
+            600,
+        )
 
-    def pop_pkce(self, state: str) -> str | None:
+    def pop_pkce(self, state: str) -> dict | None:
         key = self._key("pkce", state)
         payload = self._get(key)
         if payload:
             self._store.pop(key, None)
-            return payload.get("verifier")
+            verifier = payload.get("verifier")
+            if not verifier:
+                return None
+            return {
+                "verifier": verifier,
+                "scopes": payload.get("scopes") or [],
+                "redirect_uri": payload.get("redirect_uri"),
+            }
         return None
 
     def cache_session_with_expiry(
