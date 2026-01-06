@@ -7,7 +7,11 @@ from msgraph_mcp.services import AuthService
 
 class FakeCache:
     def __init__(self):
-        self.pkce = "verifier"
+        self.pkce = {
+            "verifier": "verifier",
+            "scopes": ["Mail.Read", "offline_access"],
+            "redirect_uri": "http://localhost/callback",
+        }
         self.session = None
         self.access = None
         self.refresh = None
@@ -40,7 +44,7 @@ async def test_complete_pkce_stores_session(monkeypatch):
 
     access_token = jwt.encode({"tid": "tenant-1"}, "secret", algorithm="HS256")
 
-    async def fake_exchange(_code, _verifier, _redirect_uri):
+    async def fake_exchange(_code, _verifier, _redirect_uri, _scopes):
         return TokenResponse(
             access_token=access_token,
             refresh_token="refresh",
