@@ -46,10 +46,9 @@ dev-server-run:
 	GRAPH_TENANT_ID=$${GRAPH_TENANT_ID:-2a6b82b7-6327-42b2-8bab-2fe690a05373} \
 	GRAPH_REDIRECT_URI=$${GRAPH_REDIRECT_URI:-http://localhost:8080/callback} \
 	REDIS_ENDPOINT=$${REDIS_ENDPOINT:-unused} \
-	OIDC_ISSUER=$${OIDC_ISSUER:-https://issuer.example.com} \
-	OIDC_AUDIENCE=$${OIDC_AUDIENCE:-mcp} \
-	OIDC_JWKS_URL=$${OIDC_JWKS_URL:-https://issuer.example.com/.well-known/jwks.json} \
-	DISABLE_OIDC_VALIDATION=$${DISABLE_OIDC_VALIDATION:-true} \
+	OIDC_ISSUER=$${OIDC_ISSUER:-https://dev-d2i2ktw25ycepyad.us.auth0.com/} \
+	OIDC_AUDIENCE=$${OIDC_AUDIENCE:-https://mcp.msgraph.com} \
+	OIDC_JWKS_URL=$${OIDC_JWKS_URL:-https://dev-d2i2ktw25ycepyad.us.auth0.com/.well-known/jwks.json} \
 	DISABLE_OTEL=$${DISABLE_OTEL:-true} \
 	OTEL_EXPORTER_OTLP_ENDPOINT=$${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp.example.com} \
 	DATADOG_API_KEY=$${DATADOG_API_KEY:-dev-key} \
