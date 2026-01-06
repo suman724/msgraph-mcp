@@ -8,9 +8,13 @@ from typing import Any
 
 import httpx
 import jwt
+from jwt.algorithms import RSAAlgorithm
+import structlog
 
 from .config import settings
 from .errors import MCPError
+
+logger = structlog.get_logger(__name__)
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -107,6 +111,11 @@ class OIDCValidator:
         async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
             response = await client.get(settings.oidc_jwks_url)
         if response.status_code >= 400:
+            logger.warning(
+                "oidc_jwks_load_failed",
+                status=response.status_code,
+                url=settings.oidc_jwks_url,
+            )
             raise MCPError("AUTH_REQUIRED", "Unable to load JWKS", status=401)
         self._jwks = response.json()
         return self._jwks
@@ -115,17 +124,36 @@ class OIDCValidator:
         jwks = await self._load_jwks()
         try:
             header = jwt.get_unverified_header(token)
-            key = next(k for k in jwks["keys"] if k["kid"] == header["kid"])
+            kid = header.get("kid")
+            if not kid:
+                raise KeyError("Missing kid")
+            key = next(k for k in jwks.get("keys", []) if k.get("kid") == kid)
+        except StopIteration as exc:  # pragma: no cover - defensive
+            logger.warning("oidc_unknown_kid", kid=header.get("kid"))
+            raise MCPError("AUTH_REQUIRED", "Unknown key id", status=401) from exc
         except Exception as exc:  # pragma: no cover - defensive
-            raise MCPError("AUTH_REQUIRED", "Invalid token header", status=401) from exc
+            logger.warning("oidc_invalid_header", error=str(exc))
+            raise MCPError(
+                "AUTH_REQUIRED", f"Invalid token header: {exc}", status=401
+            ) from exc
+        try:
+            jwk_key = RSAAlgorithm.from_jwk(json.dumps(key))
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("oidc_key_decode_failed", error=str(exc))
+            raise MCPError(
+                "AUTH_REQUIRED", f"Invalid token key: {exc}", status=401
+            ) from exc
         try:
             payload = jwt.decode(
                 token,
-                key,
+                jwk_key,
                 algorithms=["RS256"],
                 audience=settings.oidc_audience,
                 issuer=settings.oidc_issuer,
             )
             return payload
         except jwt.PyJWTError as exc:
-            raise MCPError("AUTH_REQUIRED", "Invalid token", status=401) from exc
+            logger.warning("oidc_invalid_token", error=str(exc))
+            raise MCPError(
+                "AUTH_REQUIRED", f"Invalid token: {exc}", status=401
+            ) from exc

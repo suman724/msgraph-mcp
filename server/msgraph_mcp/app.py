@@ -51,12 +51,39 @@ def _idempotency_cache_key(session: dict, tool_name: str, key: str) -> str:
     return f"{session['tenant_id']}:{session['user_id']}:{tool_name}:{key}"
 
 
+def _get_authorization_header(authorization: str | None) -> str | None:
+    if authorization:
+        return authorization
+    try:
+        request = server.get_context().request_context.request
+    except LookupError:  # pragma: no cover - request context missing
+        return None
+    if not request:  # pragma: no cover - transport without request
+        return None
+    return request.headers.get("authorization")
+
+
+def _extract_bearer(authorization: str | None) -> str:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1]
+    return ""
+
+
+async def _require_client_token(authorization: str | None) -> None:
+    if settings.disable_oidc_validation:
+        return
+    auth_header = _get_authorization_header(authorization)
+    bearer = _extract_bearer(auth_header)
+    if not bearer:
+        raise MCPError("AUTH_REQUIRED", "Missing client token", status=401)
+    await oidc_validator.validate(bearer)
+
+
 async def _resolve_session(
     graph_session_id: str | None, authorization: str | None
 ) -> dict[str, Any]:
-    bearer = ""
-    if authorization and authorization.lower().startswith("bearer "):
-        bearer = authorization.split(" ", 1)[1]
+    auth_header = _get_authorization_header(authorization)
+    bearer = _extract_bearer(auth_header)
     return await session_resolver.resolve(graph_session_id or "", bearer)
 
 
@@ -83,6 +110,7 @@ async def _idempotent(
 async def auth_begin_pkce(
     scopes: list[str], redirect_uri: str | None = None, login_hint: str | None = None
 ) -> dict[str, Any]:
+    await _require_client_token(None)
     result = auth_service.begin_pkce(scopes, redirect_uri, login_hint)
     return {
         "authorization_url": result.authorization_url,
@@ -95,6 +123,7 @@ async def auth_begin_pkce(
 async def auth_complete_pkce(
     code: str, state: str, redirect_uri: str | None = None
 ) -> dict[str, Any]:
+    await _require_client_token(None)
     return await auth_service.complete_pkce(code, state, redirect_uri)
 
 
@@ -127,9 +156,8 @@ async def system_health() -> dict[str, Any]:
 
 @server.tool("system_whoami")
 async def system_whoami(authorization: str | None = None) -> dict[str, Any]:
-    bearer = ""
-    if authorization and authorization.lower().startswith("bearer "):
-        bearer = authorization.split(" ", 1)[1]
+    auth_header = _get_authorization_header(authorization)
+    bearer = _extract_bearer(auth_header)
     if settings.disable_oidc_validation:
         return {"claims": {}, "validation": "disabled"}
     claims = await oidc_validator.validate(bearer)
